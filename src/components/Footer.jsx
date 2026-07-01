@@ -108,20 +108,20 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-widest text-[#E8C97E]">About Us</h4>
             <ul className="space-y-2.5">
-              <li><a href="#story" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Our Heritage</a></li>
-              <li><a href="#ingredients" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Ingredients Source</a></li>
-              <li><a href="#barber" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">The Barber Program</a></li>
-              <li><a href="#careers" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Careers</a></li>
+              <li><Link to="/about?tab=heritage" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Our Heritage</Link></li>
+              <li><Link to="/about?tab=ingredients" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Ingredients Source</Link></li>
+              <li><Link to="/about?tab=barber" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">The Barber Program</Link></li>
+              <li><Link to="/about?tab=careers" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Careers</Link></li>
             </ul>
           </div>
 
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-widest text-[#E8C97E]">Customer Care</h4>
             <ul className="space-y-2.5">
-              <li><a href="#shipping" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Shipping & Delivery</a></li>
-              <li><a href="#returns" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Returns & Exchanges</a></li>
-              <li><a href="#faq" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">FAQ Help Center</a></li>
-              <li><a href="#contact" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Contact Support</a></li>
+              <li><Link to="/customer-care?tab=shipping" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Shipping & Delivery</Link></li>
+              <li><Link to="/customer-care?tab=returns" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Returns & Exchanges</Link></li>
+              <li><Link to="/customer-care?tab=faq" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">FAQ Help Center</Link></li>
+              <li><Link to="/contact" className="text-sm text-zinc-400 hover:text-white transition-colors duration-200">Contact Support</Link></li>
             </ul>
           </div>
 

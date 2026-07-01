@@ -10,6 +10,8 @@ import Products from './pages/Products';
 import BeardCare from './pages/BeardCare';
 import HairCare from './pages/HairCare';
 import Skincare from './pages/Skincare';
+import About from './pages/About';
+import CustomerCare from './pages/CustomerCare';
 
 import ReviewsPage from './pages/ReviewsPage';
 import Contact from './pages/Contact';
@@ -107,6 +109,8 @@ function App() {
           <Route path="/beard-care" element={<BeardCare />} />
           <Route path="/hair-care" element={<HairCare />} />
           <Route path="/skincare" element={<Skincare />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/customer-care" element={<CustomerCare />} />
 
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/contact" element={<Contact />} />
