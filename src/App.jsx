@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient';
 
 // Pages
 import CustomGrooming from './pages/CustomGrooming';
+import Products from './pages/Products';
 import BeardCare from './pages/BeardCare';
 import HairCare from './pages/HairCare';
 import Skincare from './pages/Skincare';
@@ -101,7 +102,8 @@ function App() {
         {/* Page Routes */}
         <Routes>
           {/* Public Shop Routes */}
-          <Route path="/" element={<Navigate to="/beard-care" replace />} />
+          <Route path="/" element={<Navigate to="/products" replace />} />
+          <Route path="/products" element={<Products />} />
           <Route path="/beard-care" element={<BeardCare />} />
           <Route path="/hair-care" element={<HairCare />} />
           <Route path="/skincare" element={<Skincare />} />

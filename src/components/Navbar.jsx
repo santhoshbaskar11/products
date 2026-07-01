@@ -72,6 +72,7 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-8">
+            <NavLink to="/products" className={navLinkClass}>SHOP</NavLink>
             <NavLink to="/beard-care" className={navLinkClass}>BEARD</NavLink>
             <NavLink to="/hair-care" className={navLinkClass}>HAIR</NavLink>
             <NavLink to="/skincare" className={navLinkClass}>SKINCARE</NavLink>
@@ -197,6 +198,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex flex-col gap-2">
+          <NavLink to="/products" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Shop Catalog</NavLink>
           <NavLink to="/beard-care" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Beard Care</NavLink>
           <NavLink to="/hair-care" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Hair Care</NavLink>
           <NavLink to="/skincare" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Skincare Essentials</NavLink>
