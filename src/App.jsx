@@ -101,7 +101,7 @@ function App() {
         {/* Page Routes */}
         <Routes>
           {/* Public Shop Routes */}
-          <Route path="/" element={<Navigate to="/custom-grooming" replace />} />
+          <Route path="/" element={<Navigate to="/beard-care" replace />} />
           <Route path="/beard-care" element={<BeardCare />} />
           <Route path="/hair-care" element={<HairCare />} />
           <Route path="/skincare" element={<Skincare />} />
