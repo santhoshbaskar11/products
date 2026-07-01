@@ -47,14 +47,49 @@ const NotFound = () => (
 
 function App() {
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase.from('products').select('*');
-      console.log('Supabase products data:', data);
-      if (error) {
-        console.error('Supabase products error:', error);
-      }
+    const fetchSupabaseData = async () => {
+      // 1. Products
+      const { data: productsData, error: productsError } = await supabase.from('products').select('*');
+      console.log('Supabase products data:', productsData);
+      if (productsError) console.error('Supabase products error:', productsError);
+
+      // 2. Customers
+      const { data: customersData, error: customersError } = await supabase.from('customers').select('*');
+      console.log('Supabase customers data:', customersData);
+      if (customersError) console.error('Supabase customers error:', customersError);
+
+      // 3. Contact Messages
+      const { data: messagesData, error: messagesError } = await supabase.from('contact_messages').select('*');
+      console.log('Supabase contact messages data:', messagesData);
+      if (messagesError) console.error('Supabase contact messages error:', messagesError);
+
+      // 4. Reviews
+      const { data: reviewsData, error: reviewsError } = await supabase.from('reviews').select('*');
+      console.log('Supabase reviews data:', reviewsData);
+      if (reviewsError) console.error('Supabase reviews error:', reviewsError);
+
+      // 5. Cart
+      const { data: cartData, error: cartError } = await supabase.from('cart').select('*');
+      console.log('Supabase cart data:', cartData);
+      if (cartError) console.error('Supabase cart error:', cartError);
+
+      // 6. Custom Grooming Products
+      const { data: customData, error: customError } = await supabase.from('custom_grooming_products').select('*');
+      console.log('Supabase custom grooming products data:', customData);
+      if (customError) console.error('Supabase custom grooming products error:', customError);
+
+      // 7. Orders
+      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*');
+      console.log('Supabase orders data:', ordersData);
+      if (ordersError) console.error('Supabase orders error:', ordersError);
+
+      // 8. Order Items
+      const { data: orderItemsData, error: orderItemsError } = await supabase.from('order_items').select('*');
+      console.log('Supabase order items data:', orderItemsData);
+      if (orderItemsError) console.error('Supabase order items error:', orderItemsError);
     };
-    fetchProducts();
+    
+    fetchSupabaseData();
   }, []);
 
   return (
