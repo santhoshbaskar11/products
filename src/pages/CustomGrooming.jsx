@@ -4,9 +4,9 @@ import { ShopContext } from '../context/ShopContext';
 import SectionHeader from '../components/ui/SectionHeader';
 import { Sparkles, ShoppingBag, Gift, Star, Award, Copy, Check, ChevronDown, HelpCircle } from 'lucide-react';
 import { CUSTOM_GROOMING_KITS } from '../data/products';
-import b1 from '../assets/images/products/b1.jpg';
-import h1 from '../assets/images/products/h1.jpg';
-import s1 from '../assets/images/products/s1.jpg';
+import beardOil from '../assets/images/products/beard-oil.jpg';
+import hairClay from '../assets/images/products/hair-clay.jpg';
+import faceScrub from '../assets/images/products/face-scrub.jpg';
 
 const FAQItem = ({ question, answer }) => {
   const [open, setOpen] = useState(false);
@@ -52,9 +52,9 @@ const CustomGrooming = () => {
 
   const getCategoryImage = () => {
     switch (category) {
-      case 'hair': return h1;
-      case 'skin': return s1;
-      default: return b1; // beard
+      case 'hair': return hairClay;
+      case 'skin': return faceScrub;
+      default: return beardOil; // beard
     }
   };
 

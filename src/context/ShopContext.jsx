@@ -1,188 +1,33 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { ALL_PRODUCTS, REVIEWS as INITIAL_REVIEWS } from '../data/products';
+import { supabase } from '../supabaseClient';
 
 export const ShopContext = createContext(null);
 
+// Utility to generate UUIDs locally for guest session tracking
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export const ShopContextProvider = ({ children }) => {
-  // Load products from localStorage or initialize
-  const [products, setProducts] = useState(() => {
-    const local = localStorage.getItem('sovereign_products');
-    return local ? JSON.parse(local) : ALL_PRODUCTS;
-  });
-
-  // Load cart from localStorage or initialize
-  const [cart, setCart] = useState(() => {
-    const local = localStorage.getItem('sovereign_cart');
-    return local ? JSON.parse(local) : [];
-  });
-
-  // Load wishlist from localStorage or initialize
-  const [wishlist, setWishlist] = useState(() => {
-    const local = localStorage.getItem('sovereign_wishlist');
-    return local ? JSON.parse(local) : [];
-  });
-
-  // Load reviews from localStorage or initialize
-  const [reviews, setReviews] = useState(() => {
-    const local = localStorage.getItem('sovereign_reviews');
-    return local ? JSON.parse(local) : INITIAL_REVIEWS;
-  });
-
-  // Search state
+  // State definitions
+  const [products, setProducts] = useState(ALL_PRODUCTS);
+  const [cart, setCart] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [contactMessages, setContactMessages] = useState([]);
+  const [customOrders, setCustomOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Load orders from localStorage or initialize
-  const [orders, setOrders] = useState(() => {
-    const local = localStorage.getItem('sovereign_orders');
-    const initialOrders = [
-      {
-        id: 'ORD-5489',
-        customer: 'Jonathan Sterling',
-        email: 'jonathan@sterling.com',
-        date: '2026-06-28',
-        amount: 148.00,
-        items: [
-          { name: 'Imperial Beard Oil', qty: 2, price: 38 },
-          { name: 'The Sovereign Grooming Kit', qty: 1, price: 89 }
-        ],
-        status: 'Delivered',
-        paymentStatus: 'Paid'
-      },
-      {
-        id: 'ORD-9021',
-        customer: 'David Reynolds',
-        email: 'david.r@gmail.com',
-        date: '2026-06-29',
-        amount: 60.00,
-        items: [
-          { name: 'Daily Hydration Shield SPF 20', qty: 1, price: 28 },
-          { name: 'Caffeine Eye Rescue Cream', qty: 1, price: 32 }
-        ],
-        status: 'Processing',
-        paymentStatus: 'Pending'
-      },
-      {
-        id: 'ORD-1154',
-        customer: 'Marcus Vance',
-        email: 'marcus.v@barbershop.com',
-        date: '2026-06-30',
-        amount: 22.00,
-        items: [
-          { name: 'Matte Clay Pomade', qty: 1, price: 22 }
-        ],
-        status: 'Shipped',
-        paymentStatus: 'Paid'
-      }
-    ];
-    return local ? JSON.parse(local) : initialOrders;
-  });
-
-  // Load customers from localStorage or initialize
-  const [customers, setCustomers] = useState(() => {
-    const local = localStorage.getItem('sovereign_customers');
-    const initialCustomers = [
-      {
-        id: 'CST-001',
-        name: 'Jonathan Sterling',
-        email: 'jonathan@sterling.com',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-        ordersCount: 4,
-        totalSpent: 388.00,
-        tier: 'Sovereign VIP'
-      },
-      {
-        id: 'CST-002',
-        name: 'Marcus Vance',
-        email: 'marcus.v@barbershop.com',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        ordersCount: 2,
-        totalSpent: 98.00,
-        tier: 'Pro Barber'
-      },
-      {
-        id: 'CST-003',
-        name: 'David Reynolds',
-        email: 'david.r@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80',
-        ordersCount: 5,
-        totalSpent: 264.00,
-        tier: 'Sovereign VIP'
-      },
-      {
-        id: 'CST-004',
-        name: 'Julian Vance',
-        email: 'julian.v@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&q=80',
-        ordersCount: 1,
-        totalSpent: 110.00,
-        tier: 'Standard'
-      }
-    ];
-    return local ? JSON.parse(local) : initialCustomers;
-  });
-
-  // Load contact messages from localStorage or initialize
-  const [contactMessages, setContactMessages] = useState(() => {
-    const local = localStorage.getItem('sovereign_messages');
-    const initialMessages = [
-      {
-        id: 'MSG-8849',
-        name: 'Liam Vance',
-        email: 'liam@vance.com',
-        message: 'Hi, I would like to inquire about bulk ordering custom kits for our corporate retreat. Do you offer custom branding on the wooden plate?',
-        unread: true,
-        date: '2026-06-30'
-      },
-      {
-        id: 'MSG-3021',
-        name: 'Arthur Pendragon',
-        email: 'arthur@camelot.com',
-        message: 'Sandalwood Beard Balm has transformed my stubble. Excellent hold and aroma. When will the Sovereign combs be back in stock?',
-        unread: false,
-        date: '2026-06-29'
-      }
-    ];
-    return local ? JSON.parse(local) : initialMessages;
-  });
-
-  // Load custom kit orders from localStorage or initialize
-  const [customOrders, setCustomOrders] = useState(() => {
-    const local = localStorage.getItem('sovereign_custom_orders');
-    const initialCustomOrders = [
-      {
-        id: 'CST-9041',
-        customer: 'Jonathan Sterling',
-        email: 'jonathan@sterling.com',
-        category: 'beard',
-        brand: 'Sovereign Lab',
-        fragrance: 'Sandalwood Bourbon',
-        packaging: true,
-        notes: 'J.S. - Limited Edition',
-        price: 54.99,
-        quantity: 1,
-        status: 'Delivered',
-        date: '2026-06-28'
-      },
-      {
-        id: 'CST-2309',
-        customer: 'David Reynolds',
-        email: 'david.r@gmail.com',
-        category: 'skin',
-        brand: 'Vanguard Botanicals',
-        fragrance: 'Fresh Bergamot Mint',
-        packaging: false,
-        notes: 'D.R. Daily Pack',
-        price: 42.00,
-        quantity: 2,
-        status: 'Processing',
-        date: '2026-06-30'
-      }
-    ];
-    return local ? JSON.parse(local) : initialCustomOrders;
-  });
-
-  // Floating Toast Notification States
   const [toasts, setToasts] = useState([]);
+
+  // Seeding/loading helper
+  const [guestCustomerId, setGuestCustomerId] = useState(null);
 
   const addToast = (text, type = 'success') => {
     const id = Date.now();
@@ -192,95 +37,447 @@ export const ShopContextProvider = ({ children }) => {
     }, 3000);
   };
 
-  // Sync to localStorage
+  // 1. Initialize Guest Customer ID and load all tables
   useEffect(() => {
-    localStorage.setItem('sovereign_products', JSON.stringify(products));
-  }, [products]);
+    const initializeDatabase = async () => {
+      // Setup Guest Customer ID
+      let guestId = localStorage.getItem('sovereign_guest_customer_id');
+      if (!guestId) {
+        guestId = generateUUID();
+        localStorage.setItem('sovereign_guest_customer_id', guestId);
+      }
+      setGuestCustomerId(guestId);
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_cart', JSON.stringify(cart));
-  }, [cart]);
+      // Verify guest customer exists in DB, if not insert it
+      try {
+        const { data: existingCust } = await supabase.from('customers').select('id').eq('id', guestId);
+        if (!existingCust || existingCust.length === 0) {
+          await supabase.from('customers').insert({
+            id: guestId,
+            full_name: 'Guest Customer',
+            email: `guest-${guestId.slice(0, 8)}@sovereign.com`
+          });
+        }
+      } catch (err) {
+        console.error("Guest customer sync failed", err);
+      }
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
+      // Fetch all tables
+      await loadProducts();
+      await loadCustomers();
+      await loadReviews();
+      await loadOrders();
+      await loadContactMessages();
+      await loadCustomOrders();
+      await loadCartAndWishlist(guestId);
+    };
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_reviews', JSON.stringify(reviews));
-  }, [reviews]);
+    initializeDatabase();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_orders', JSON.stringify(orders));
-  }, [orders]);
+  // Database Load Handlers
+  const loadProducts = async () => {
+    try {
+      const { data, error } = await supabase.from('products').select('*');
+      if (error) throw error;
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_customers', JSON.stringify(customers));
-  }, [customers]);
+      if (data && data.length > 0) {
+        const dbProds = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: Number(p.price),
+          rating: Number(p.rating),
+          reviewsCount: p.reviews_count || 0,
+          tag: p.tag,
+          category: p.category,
+          image: ALL_PRODUCTS.find(ap => ap.id === p.id)?.image || p.image_url,
+          image_url: p.image_url
+        }));
+        
+        // Seed any missing products from ALL_PRODUCTS (the new JPEGs)
+        const missing = ALL_PRODUCTS.filter(ap => !data.some(dbP => dbP.id === ap.id));
+        if (missing.length > 0) {
+          const insertPayload = missing.map(ap => ({
+            id: ap.id,
+            name: ap.name,
+            description: ap.description,
+            price: ap.price,
+            rating: ap.rating,
+            reviews_count: ap.reviewsCount,
+            tag: ap.tag,
+            category: ap.category,
+            image_url: ap.id
+          }));
+          await supabase.from('products').insert(insertPayload);
+          
+          // Re-fetch all products
+          const { data: updatedData } = await supabase.from('products').select('*');
+          if (updatedData) {
+            setProducts(updatedData.map(p => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              price: Number(p.price),
+              rating: Number(p.rating),
+              reviewsCount: p.reviews_count || 0,
+              tag: p.tag,
+              category: p.category,
+              image: ALL_PRODUCTS.find(ap => ap.id === p.id)?.image || p.image_url,
+              image_url: p.image_url
+            })));
+            return;
+          }
+        }
+        setProducts(dbProds);
+      } else {
+        // Seed entire products catalog
+        const insertPayload = ALL_PRODUCTS.map(ap => ({
+          id: ap.id,
+          name: ap.name,
+          description: ap.description,
+          price: ap.price,
+          rating: ap.rating,
+          reviews_count: ap.reviewsCount,
+          tag: ap.tag,
+          category: ap.category,
+          image_url: ap.id
+        }));
+        await supabase.from('products').insert(insertPayload);
+        setProducts(ALL_PRODUCTS);
+      }
+    } catch (e) {
+      console.error("Products load failed, using fallbacks:", e);
+      setProducts(ALL_PRODUCTS);
+    }
+  };
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_messages', JSON.stringify(contactMessages));
-  }, [contactMessages]);
+  const loadReviews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*, customers(full_name, email)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
 
-  useEffect(() => {
-    localStorage.setItem('sovereign_custom_orders', JSON.stringify(customOrders));
-  }, [customOrders]);
+      if (data && data.length > 0) {
+        const mapped = data.map(r => ({
+          id: r.id,
+          name: r.customers?.full_name || 'Anonymous',
+          role: 'Verified Buyer',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          rating: Number(r.rating || 5),
+          title: 'Verified Customer Review',
+          comment: r.review || '',
+          date: r.created_at?.slice(0, 10),
+          approved: true,
+          product_id: r.product_id
+        }));
+        setReviews(mapped);
+      } else {
+        setReviews(INITIAL_REVIEWS);
+      }
+    } catch (e) {
+      console.error("Reviews load failed, using fallbacks:", e);
+      setReviews(INITIAL_REVIEWS);
+    }
+  };
+
+  const loadCustomers = async () => {
+    try {
+      const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setCustomers(data.map(c => ({
+          id: c.id,
+          name: c.full_name,
+          email: c.email,
+          phone: c.phone || 'N/A',
+          address: c.address || 'N/A',
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+          ordersCount: 0, // computed dynamic below
+          totalSpent: 0,
+          tier: 'Standard'
+        })));
+      }
+    } catch (e) {
+      console.error("Customers load failed:", e);
+    }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, customers(*), order_items(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mapped = data.map(o => ({
+          id: o.id,
+          customer: o.customers?.full_name || 'Guest Customer',
+          email: o.customers?.email || 'N/A',
+          date: o.created_at?.slice(0, 10),
+          amount: Number(o.total_amount),
+          status: o.order_status,
+          paymentStatus: o.payment_status,
+          items: o.order_items || []
+        }));
+        setOrders(mapped);
+      }
+    } catch (e) {
+      console.error("Orders load failed:", e);
+    }
+  };
+
+  const loadContactMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setContactMessages(data.map(m => ({
+          id: m.id,
+          name: m.name || 'Anonymous',
+          email: m.email || 'N/A',
+          message: m.message || '',
+          unread: false,
+          date: m.created_at?.slice(0, 10)
+        })));
+      }
+    } catch (e) {
+      console.error("Messages load failed:", e);
+    }
+  };
+
+  const loadCustomOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('custom_grooming_orders')
+        .select('*, customers(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mapped = data.map(o => ({
+          id: o.id,
+          customer: o.customers?.full_name || 'Guest Customer',
+          email: o.customers?.email || 'N/A',
+          category: o.product_type,
+          brand: o.brand,
+          fragrance: o.fragrance,
+          packaging: o.gift_packaging,
+          notes: o.custom_note || '',
+          price: Number(o.estimated_price || 0),
+          quantity: o.quantity || 1,
+          status: o.status || 'Processing',
+          date: o.created_at?.slice(0, 10),
+          image: ALL_PRODUCTS.find(p => p.category === o.product_type)?.image
+        }));
+        setCustomOrders(mapped);
+      }
+    } catch (e) {
+      console.error("Custom orders load failed:", e);
+    }
+  };
+
+  const loadCartAndWishlist = async (custId) => {
+    try {
+      // Cart
+      const { data: cartData } = await supabase.from('cart').select('*').eq('customer_id', custId);
+      if (cartData && cartData.length > 0) {
+        const mappedCart = cartData.map(item => {
+          const prod = ALL_PRODUCTS.find(p => p.id === item.product_id);
+          return {
+            product: prod || { id: item.product_id, name: 'Grooming Product', price: 0 },
+            quantity: item.quantity
+          };
+        });
+        setCart(mappedCart);
+      }
+
+      // Wishlist
+      const { data: wishData } = await supabase.from('wishlist').select('*').eq('customer_id', custId);
+      if (wishData && wishData.length > 0) {
+        const mappedWish = wishData.map(item => {
+          return ALL_PRODUCTS.find(p => p.id === item.product_id);
+        }).filter(Boolean);
+        setWishlist(mappedWish);
+      }
+    } catch (e) {
+      console.error("Cart/Wishlist load failed:", e);
+    }
+  };
 
   // CRUD Product Handlers
-  const addProduct = (product) => {
+  const addProduct = async (product) => {
     setProducts((prev) => [product, ...prev]);
     addToast('Product successfully added to catalog!');
+
+    try {
+      await supabase.from('products').insert({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        rating: product.rating,
+        reviews_count: product.reviewsCount || 0,
+        tag: product.tag,
+        category: product.category,
+        image_url: product.id
+      });
+    } catch (err) {
+      console.error("Supabase insert product error:", err);
+    }
   };
 
-  const updateProduct = (updatedProd) => {
+  const updateProduct = async (updatedProd) => {
     setProducts((prev) => prev.map((p) => (p.id === updatedProd.id ? updatedProd : p)));
     addToast('Product details updated successfully.');
+
+    try {
+      await supabase.from('products').update({
+        name: updatedProd.name,
+        description: updatedProd.description,
+        price: updatedProd.price,
+        rating: updatedProd.rating,
+        tag: updatedProd.tag,
+        category: updatedProd.category
+      }).eq('id', updatedProd.id);
+    } catch (err) {
+      console.error("Supabase update product error:", err);
+    }
   };
 
-  const deleteProduct = (id) => {
+  const deleteProduct = async (id) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
     addToast('Product deleted from inventory catalog.', 'warning');
+
+    try {
+      await supabase.from('products').delete().eq('id', id);
+    } catch (err) {
+      console.error("Supabase delete product error:", err);
+    }
   };
 
   // CRUD Order Handlers
-  const deleteOrder = (orderId) => {
+  const deleteOrder = async (orderId) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     addToast(`Order ${orderId} successfully deleted.`, 'warning');
+
+    try {
+      await supabase.from('order_items').delete().eq('order_id', orderId);
+      await supabase.from('orders').delete().eq('id', orderId);
+    } catch (err) {
+      console.error("Supabase delete order error:", err);
+    }
   };
 
-  const updateOrderStatus = (orderId, status) => {
+  const updateOrderStatus = async (orderId, status) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o))
     );
     addToast(`Order ${orderId} status updated to: ${status}.`);
+
+    try {
+      await supabase.from('orders').update({
+        order_status: status
+      }).eq('id', orderId);
+    } catch (err) {
+      console.error("Supabase update order status error:", err);
+    }
   };
 
-  const updateOrderPaymentStatus = (orderId, paymentStatus) => {
+  const updateOrderPaymentStatus = async (orderId, paymentStatus) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, paymentStatus } : o))
     );
     addToast(`Order ${orderId} payment updated to: ${paymentStatus}.`);
+
+    try {
+      await supabase.from('orders').update({
+        payment_status: paymentStatus
+      }).eq('id', orderId);
+    } catch (err) {
+      console.error("Supabase update order payment error:", err);
+    }
   };
 
   // CRUD Customer Handlers
-  const updateCustomer = (updatedCust) => {
+  const updateCustomer = async (updatedCust) => {
     setCustomers((prev) => prev.map((c) => (c.id === updatedCust.id ? updatedCust : c)));
     addToast(`Customer ${updatedCust.name} profile successfully updated.`);
+
+    try {
+      await supabase.from('customers').update({
+        full_name: updatedCust.name,
+        email: updatedCust.email,
+        phone: updatedCust.phone,
+        address: updatedCust.address
+      }).eq('id', updatedCust.id);
+    } catch (err) {
+      console.error("Supabase update customer error:", err);
+    }
   };
 
-  const deleteCustomer = (custId) => {
+  const deleteCustomer = async (custId) => {
     setCustomers((prev) => prev.filter((c) => c.id !== custId));
     addToast('Customer account deleted from records.', 'warning');
+
+    try {
+      await supabase.from('customers').delete().eq('id', custId);
+    } catch (err) {
+      console.error("Supabase delete customer error:", err);
+    }
   };
 
   // CRUD Review Handlers
-  const addReview = (review) => {
+  const addReview = async (review) => {
     setReviews((prev) => [review, ...prev]);
     addToast('Review submitted for moderation.');
+
+    try {
+      // Find or insert mock customer for review visibility
+      let custId = guestCustomerId;
+      const { data: existing } = await supabase.from('customers').select('id').eq('email', review.name.toLowerCase().replace(/\s+/g, '') + '@example.com');
+      if (existing && existing.length > 0) {
+        custId = existing[0].id;
+      } else {
+        const { data: newCust } = await supabase.from('customers').insert({
+          full_name: review.name,
+          email: review.name.toLowerCase().replace(/\s+/g, '') + '@example.com'
+        }).select();
+        if (newCust && newCust.length > 0) custId = newCust[0].id;
+      }
+
+      await supabase.from('reviews').insert({
+        customer_id: custId,
+        product_id: review.product_id || 'b1',
+        rating: review.rating,
+        review: review.comment
+      });
+    } catch (err) {
+      console.error("Supabase add review error:", err);
+    }
   };
 
-  const updateReview = (updatedRev) => {
+  const updateReview = async (updatedRev) => {
     setReviews((prev) => prev.map((r) => (r.id === updatedRev.id ? updatedRev : r)));
     addToast('Review text and rating modified successfully.');
+
+    try {
+      await supabase.from('reviews').update({
+        rating: updatedRev.rating,
+        review: updatedRev.comment
+      }).eq('id', updatedRev.id);
+    } catch (err) {
+      console.error("Supabase update review error:", err);
+    }
   };
 
   const approveReview = (reviewId) => {
@@ -297,14 +494,31 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Review hidden from site display.', 'warning');
   };
 
-  const deleteReview = (reviewId) => {
+  const deleteReview = async (reviewId) => {
     setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     addToast('Review deleted from database.', 'warning');
+
+    try {
+      await supabase.from('reviews').delete().eq('id', reviewId);
+    } catch (err) {
+      console.error("Supabase delete review error:", err);
+    }
   };
 
   // CRUD Message Handlers
-  const addContactMessage = (msg) => {
+  const addContactMessage = async (msg) => {
     setContactMessages((prev) => [msg, ...prev]);
+
+    try {
+      await supabase.from('contact_messages').insert({
+        id: msg.id || generateUUID(),
+        name: msg.name,
+        email: msg.email,
+        message: msg.message
+      });
+    } catch (err) {
+      console.error("Supabase add contact message error:", err);
+    }
   };
 
   const toggleMessageRead = (msgId) => {
@@ -313,32 +527,65 @@ export const ShopContextProvider = ({ children }) => {
     );
   };
 
-  const deleteMessage = (msgId) => {
+  const deleteMessage = async (msgId) => {
     setContactMessages((prev) => prev.filter((m) => m.id !== msgId));
     addToast('Message deleted from inbox.', 'warning');
+
+    try {
+      await supabase.from('contact_messages').delete().eq('id', msgId);
+    } catch (err) {
+      console.error("Supabase delete contact message error:", err);
+    }
   };
 
   // CRUD Custom Orders Handlers
-  const updateCustomOrder = (updatedOrder) => {
+  const updateCustomOrder = async (updatedOrder) => {
     setCustomOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
     addToast(`Custom order ${updatedOrder.id} successfully updated.`);
+
+    try {
+      await supabase.from('custom_grooming_orders').update({
+        product_type: updatedOrder.category,
+        brand: updatedOrder.brand,
+        fragrance: updatedOrder.fragrance,
+        gift_packaging: updatedOrder.packaging,
+        custom_note: updatedOrder.notes,
+        status: updatedOrder.status
+      }).eq('id', updatedOrder.id);
+    } catch (err) {
+      console.error("Supabase update custom order error:", err);
+    }
   };
 
-  const updateCustomOrderStatus = (orderId, status) => {
+  const updateCustomOrderStatus = async (orderId, status) => {
     setCustomOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o))
     );
     addToast(`Custom order ${orderId} status updated to: ${status}.`);
+
+    try {
+      await supabase.from('custom_grooming_orders').update({
+        status: status
+      }).eq('id', orderId);
+    } catch (err) {
+      console.error("Supabase update custom order status error:", err);
+    }
   };
 
-  const deleteCustomOrder = (orderId) => {
+  const deleteCustomOrder = async (orderId) => {
     setCustomOrders((prev) => prev.filter((o) => o.id !== orderId));
     addToast(`Custom order ${orderId} deleted from database.`, 'warning');
+
+    try {
+      await supabase.from('custom_grooming_orders').delete().eq('id', orderId);
+    } catch (err) {
+      console.error("Supabase delete custom order error:", err);
+    }
   };
 
   // Cart actions
-  const addToCart = (productId, qty = 1) => {
-    const product = products.find((p) => p.id === productId);
+  const addToCart = async (productId, qty = 1) => {
+    const product = ALL_PRODUCTS.find((p) => p.id === productId);
     if (!product) return;
 
     setCart((prev) => {
@@ -353,10 +600,23 @@ export const ShopContextProvider = ({ children }) => {
       return [...prev, { product, quantity: qty }];
     });
     addToast('Product added to shopping bag!');
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        const { data: existing } = await supabase.from('cart').select('*').eq('customer_id', custId).eq('product_id', productId).limit(1);
+        if (existing && existing.length > 0) {
+          await supabase.from('cart').update({ quantity: existing[0].quantity + qty }).eq('id', existing[0].id);
+        } else {
+          await supabase.from('cart').insert({ customer_id: custId, product_id: productId, quantity: qty });
+        }
+      }
+    } catch (err) {
+      console.error("Supabase sync cart error:", err);
+    }
   };
 
   const addCustomKitToCart = (kit) => {
-    // Generate order item details
     setCart((prev) => {
       const existingIndex = prev.findIndex((item) => 
         item.isCustom &&
@@ -393,12 +653,21 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Customized kit added to shopping bag!');
   };
 
-  const removeFromCart = (productId) => {
+  const removeFromCart = async (productId) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
     addToast('Item removed from shopping bag.', 'warning');
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        await supabase.from('cart').delete().eq('customer_id', custId).eq('product_id', productId);
+      }
+    } catch (err) {
+      console.error("Supabase remove cart error:", err);
+    }
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = async (productId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
@@ -408,15 +677,37 @@ export const ShopContextProvider = ({ children }) => {
         item.product.id === productId ? { ...item, quantity } : item
       )
     );
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        await supabase.from('cart').update({ quantity }).eq('customer_id', custId).eq('product_id', productId);
+      }
+    } catch (err) {
+      console.error("Supabase update cart quantity error:", err);
+    }
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
     setCart([]);
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        await supabase.from('cart').delete().eq('customer_id', custId);
+      }
+    } catch (err) {
+      console.error("Supabase clear cart error:", err);
+    }
   };
 
-  const createOrderFromCart = (customerName, customerEmail) => {
+  const createOrderFromCart = async (customerName, customerEmail) => {
     if (cart.length === 0) return;
 
+    const email = customerEmail || 'guest@example.com';
+    const name = customerName || 'Guest Customer';
+    
+    // Local Order Insertion mock logic
     const orderId = `ORD-${Date.now().toString().slice(-4)}`;
     const orderItems = cart.map(item => ({
       name: item.product.name,
@@ -426,8 +717,8 @@ export const ShopContextProvider = ({ children }) => {
 
     const newOrder = {
       id: orderId,
-      customer: customerName || 'Guest Customer',
-      email: customerEmail || 'guest@example.com',
+      customer: name,
+      email: email,
       date: new Date().toISOString().slice(0, 10),
       amount: getCartTotal() + (getCartTotal() > 50 ? 0 : 5.99),
       items: orderItems,
@@ -435,16 +726,15 @@ export const ShopContextProvider = ({ children }) => {
       paymentStatus: 'Paid'
     };
 
-    // Add to orders list
     setOrders(prev => [newOrder, ...prev]);
 
-    // Check for any custom kits in cart and add them to customOrders list
+    // Handle Custom Kit orders inside cart locally
     cart.forEach(item => {
       if (item.isCustom) {
-        const customOrder = {
+        const customOrderObj = {
           id: `CST-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`,
-          customer: customerName || 'Guest Customer',
-          email: customerEmail || 'guest@example.com',
+          customer: name,
+          email: email,
           category: item.product.category,
           brand: item.product.brand,
           fragrance: item.product.fragrance,
@@ -455,45 +745,91 @@ export const ShopContextProvider = ({ children }) => {
           status: 'Processing',
           date: new Date().toISOString().slice(0, 10)
         };
-        setCustomOrders(prev => [customOrder, ...prev]);
+        setCustomOrders(prev => [customOrderObj, ...prev]);
       }
-    });
-
-    // Add customer to registered customers list if not exists
-    setCustomers(prev => {
-      const exists = prev.some(c => c.email.toLowerCase() === (customerEmail || 'guest@example.com').toLowerCase());
-      if (exists) {
-        return prev.map(c => {
-          if (c.email.toLowerCase() === (customerEmail || 'guest@example.com').toLowerCase()) {
-            return {
-              ...c,
-              ordersCount: c.ordersCount + 1,
-              totalSpent: c.totalSpent + newOrder.amount
-            };
-          }
-          return c;
-        });
-      }
-      const newCust = {
-        id: `CST-${Date.now().toString().slice(-3)}`,
-        name: customerName || 'Guest Customer',
-        email: customerEmail || 'guest@example.com',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        ordersCount: 1,
-        totalSpent: newOrder.amount,
-        tier: 'Standard'
-      };
-      return [newCust, ...prev];
     });
 
     addToast(`Order ${orderId} successfully placed!`);
     setCart([]);
+
+    // Sync checkout process to Supabase database
+    try {
+      // Find or insert customer details
+      let customerUuid;
+      const { data: cust } = await supabase.from('customers').select('id').eq('email', email).limit(1);
+      if (cust && cust.length > 0) {
+        customerUuid = cust[0].id;
+        await supabase.from('customers').update({ full_name: name }).eq('id', customerUuid);
+      } else {
+        const { data: newCust } = await supabase.from('customers').insert({
+          full_name: name,
+          email: email
+        }).select();
+        if (newCust && newCust.length > 0) customerUuid = newCust[0].id;
+      }
+
+      if (customerUuid) {
+        // Insert main order record
+        const { data: newOrd } = await supabase.from('orders').insert({
+          customer_id: customerUuid,
+          total_amount: newOrder.amount,
+          payment_status: 'Paid',
+          order_status: 'Processing'
+        }).select();
+
+        if (newOrd && newOrd.length > 0) {
+          const mainOrderId = newOrd[0].id;
+          
+          // Insert order line items
+          for (const item of cart) {
+            // Note: If it is a custom kit, it's not a preloaded product. So we fall back to 'b1' or another product ID,
+            // or we insert the custom kit details. We will insert custom kits with product_id = 'b1' for relation checks
+            // and log detailed custom grooming specifications.
+            const prodId = item.isCustom ? 'b1' : item.product.id;
+            await supabase.from('order_items').insert({
+              order_id: mainOrderId,
+              product_id: prodId,
+              quantity: item.quantity,
+              price: item.product.price
+            });
+
+            // Insert custom orders details in custom_grooming_orders if applicable
+            if (item.isCustom) {
+              await supabase.from('custom_grooming_orders').insert({
+                customer_id: customerUuid,
+                product_type: item.product.category,
+                brand: item.product.brand,
+                fragrance: item.product.fragrance,
+                quantity: item.quantity,
+                gift_packaging: item.product.packaging,
+                custom_note: item.product.notes,
+                estimated_price: item.product.price
+              });
+            }
+          }
+        }
+      }
+
+      // Clear remote cart
+      const guestId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (guestId) {
+        await supabase.from('cart').delete().eq('customer_id', guestId);
+      }
+
+      // Refresh data
+      await loadOrders();
+      await loadCustomOrders();
+      await loadCustomers();
+    } catch (err) {
+      console.error("Supabase checkout order error:", err);
+    }
   };
 
   // Wishlist actions
-  const toggleWishlist = (product) => {
+  const toggleWishlist = async (product) => {
+    let exists = false;
     setWishlist((prev) => {
-      const exists = prev.some((item) => item.id === product.id);
+      exists = prev.some((item) => item.id === product.id);
       if (exists) {
         addToast('Removed from wishlist.', 'warning');
         return prev.filter((item) => item.id !== product.id);
@@ -501,11 +837,33 @@ export const ShopContextProvider = ({ children }) => {
       addToast('Added to wishlist!');
       return [...prev, product];
     });
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        if (exists) {
+          await supabase.from('wishlist').delete().eq('customer_id', custId).eq('product_id', product.id);
+        } else {
+          await supabase.from('wishlist').insert({ customer_id: custId, product_id: product.id });
+        }
+      }
+    } catch (err) {
+      console.error("Supabase toggle wishlist error:", err);
+    }
   };
 
-  const removeFromWishlist = (productId) => {
+  const removeFromWishlist = async (productId) => {
     setWishlist((prev) => prev.filter((item) => item.id !== productId));
     addToast('Removed from wishlist.', 'warning');
+
+    try {
+      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      if (custId) {
+        await supabase.from('wishlist').delete().eq('customer_id', custId).eq('product_id', productId);
+      }
+    } catch (err) {
+      console.error("Supabase remove wishlist error:", err);
+    }
   };
 
   const moveToCart = (product) => {

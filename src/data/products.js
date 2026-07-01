@@ -1,18 +1,21 @@
-import b1 from '../assets/images/products/b1.jpg';
-import b2 from '../assets/images/products/b2.jpg';
-import b3 from '../assets/images/products/b3.jpg';
-import b4 from '../assets/images/products/b4.jpg';
+import beardOil from '../assets/images/products/beard-oil.jpg';
+import beardBalm from '../assets/images/products/beard-balm.jpg';
+import beardWash from '../assets/images/products/beard-wash.jpg';
+import beardShampoo from '../assets/images/products/beard-shampoo.jpg';
+import beardComb from '../assets/images/products/beard-comb.jpg';
+import beardBrush from '../assets/images/products/beard-brush.jpg';
+import groomingKit from '../assets/images/products/grooming-kit.jpg';
 
-import h1 from '../assets/images/products/h1.jpg';
-import h2 from '../assets/images/products/h2.jpg';
-import h3 from '../assets/images/products/h3.jpg';
-import h4 from '../assets/images/products/h4.jpg';
+import hairShampoo from '../assets/images/products/hair-shampoo.jpg';
+import hairConditioner from '../assets/images/products/hair-conditioner.jpg';
+import hairWax from '../assets/images/products/hair-wax.jpg';
+import hairClay from '../assets/images/products/hair-clay.jpg';
+import hairSerum from '../assets/images/products/hair-serum.jpg';
 
-import s1 from '../assets/images/products/s1.jpg';
-import s2 from '../assets/images/products/s2.jpg';
-import s3 from '../assets/images/products/s3.jpg';
-import s4 from '../assets/images/products/s4.jpg';
-
+import faceWash from '../assets/images/products/face-wash.jpg';
+import faceScrub from '../assets/images/products/face-scrub.jpg';
+import moisturizer from '../assets/images/products/moisturizer.jpg';
+import sunscreen from '../assets/images/products/sunscreen.jpg';
 
 export const BEARD_PRODUCTS = [
   {
@@ -22,7 +25,7 @@ export const BEARD_PRODUCTS = [
     price: 38.00,
     rating: 4.9,
     reviewsCount: 142,
-    image: b1,
+    image: beardOil,
     tag: 'Best Seller',
     category: 'beard',
   },
@@ -33,7 +36,7 @@ export const BEARD_PRODUCTS = [
     price: 24.00,
     rating: 4.8,
     reviewsCount: 98,
-    image: b2,
+    image: beardBalm,
     tag: 'Premium Blend',
     category: 'beard',
   },
@@ -44,18 +47,49 @@ export const BEARD_PRODUCTS = [
     price: 19.00,
     rating: 4.7,
     reviewsCount: 84,
-    image: b3,
+    image: beardWash,
     category: 'beard',
   },
   {
     id: 'b4',
-    name: 'The Sovereign Grooming Kit',
-    description: 'Complete set featuring oil, balm, wash, peachwood comb, and boar bristle brush.',
-    price: 89.00,
+    name: 'Ultimate Beard Grooming Kit',
+    description: 'Personalized wood grooming comb, natural boar bristle brush, premium oil, and balm.',
+    price: 68.00,
     rating: 5.0,
     reviewsCount: 210,
-    image: b4,
-    tag: 'Luxury Set',
+    image: groomingKit,
+    tag: 'Essential Kit',
+    category: 'beard',
+  },
+  {
+    id: 'b5',
+    name: 'Cedarwood Beard Shampoo',
+    description: 'Gentle, pH-balanced cleanser specially formulated for facial hair and sensitive skin.',
+    price: 22.00,
+    rating: 4.8,
+    reviewsCount: 65,
+    image: beardShampoo,
+    tag: 'New Arrival',
+    category: 'beard',
+  },
+  {
+    id: 'b6',
+    name: 'Sandalwood Beard Comb',
+    description: 'Handcrafted anti-static wooden comb designed to glide smoothly through any beard density.',
+    price: 15.00,
+    rating: 4.9,
+    reviewsCount: 120,
+    image: beardComb,
+    category: 'beard',
+  },
+  {
+    id: 'b7',
+    name: 'Boar Bristle Beard Brush',
+    description: 'Premium natural bristles to distribute oils evenly, condition hair, and style effortlessly.',
+    price: 18.00,
+    rating: 4.8,
+    reviewsCount: 94,
+    image: beardBrush,
     category: 'beard',
   }
 ];
@@ -63,12 +97,12 @@ export const BEARD_PRODUCTS = [
 export const HAIR_PRODUCTS = [
   {
     id: 'h1',
-    name: 'Matte Clay Pomade',
+    name: 'Matte Clay Styling Pomade',
     description: 'High hold with a natural matte finish, infused with bentonite clay.',
     price: 22.00,
     rating: 4.8,
     reviewsCount: 312,
-    image: h1,
+    image: hairClay,
     tag: 'Firm Hold',
     category: 'hair',
   },
@@ -79,28 +113,39 @@ export const HAIR_PRODUCTS = [
     price: 26.00,
     rating: 4.9,
     reviewsCount: 425,
-    image: h2,
+    image: hairShampoo,
     tag: 'Hair Growth',
     category: 'hair',
   },
   {
     id: 'h3',
-    name: 'Tea Tree Conditioner',
+    name: 'Tea Tree Scalp Conditioner',
     description: 'Soothes dry scalp, hydrates dry hair, and provides a tingling refreshment.',
     price: 24.00,
     rating: 4.7,
     reviewsCount: 188,
-    image: h3,
+    image: hairConditioner,
     category: 'hair',
   },
   {
     id: 'h4',
-    name: 'Texturizing Sea Salt Spray',
+    name: 'Texturizing Hair Serum Spray',
     description: 'Adds volume, definition, and a casual beach-day texture with a light hold.',
     price: 18.00,
     rating: 4.6,
     reviewsCount: 153,
-    image: h4,
+    image: hairSerum,
+    category: 'hair',
+  },
+  {
+    id: 'h5',
+    name: 'Premium Styling Hair Wax',
+    description: 'Provides flexible medium hold with a natural shine for clean, modern hairstyles.',
+    price: 20.00,
+    rating: 4.7,
+    reviewsCount: 78,
+    image: hairWax,
+    tag: 'Flexible Hold',
     category: 'hair',
   }
 ];
@@ -113,42 +158,43 @@ export const SKIN_PRODUCTS = [
     price: 20.00,
     rating: 4.7,
     reviewsCount: 220,
-    image: s1,
+    image: faceScrub,
     tag: 'Deep Clean',
     category: 'skin',
   },
   {
     id: 's2',
-    name: 'Daily Hydration Shield SPF 20',
-    description: 'Lightweight moisturizer that protects skin from UV rays without greasiness.',
+    name: 'Daily Hydration Shield Moisturizer',
+    description: 'Lightweight moisturizer that protects skin and locks in moisture without greasiness.',
     price: 28.00,
     rating: 4.8,
     reviewsCount: 340,
-    image: s2,
+    image: moisturizer,
     category: 'skin',
   },
   {
     id: 's3',
-    name: 'Caffeine Eye Rescue Cream',
-    description: 'Visibly reduces under-eye bags, dark circles, and fine lines instantly.',
+    name: 'Daily Mineral Sunscreen SPF 50',
+    description: 'Broad-spectrum mineral protection shield with invisible matte finish for active men.',
     price: 32.00,
     rating: 4.9,
     reviewsCount: 195,
-    image: s3,
-    tag: 'Anti-Fatigue',
+    image: sunscreen,
+    tag: 'UV Shield',
     category: 'skin',
   },
   {
     id: 's4',
-    name: 'Hyaluronic Acid Repair Serum',
-    description: 'Intense moisture booster that smooths wrinkles and revitalizes tired skin.',
-    price: 36.00,
+    name: 'Activated Charcoal Face Wash',
+    description: 'Deeply cleanses pores, removes oil and impurities, and energizes dull skin.',
+    price: 24.00,
     rating: 4.8,
     reviewsCount: 112,
-    image: s4,
+    image: faceWash,
     category: 'skin',
   }
 ];
+
 export const ALL_PRODUCTS = [
   ...BEARD_PRODUCTS,
   ...HAIR_PRODUCTS,
@@ -185,7 +231,7 @@ export const REVIEWS = [
     avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80',
     rating: 5,
     title: 'Skincare routine game-changer',
-    comment: 'The Caffeine Eye Cream and Moisturizer are stellar. After two weeks of use, my dark circles are completely gone and my skin feels energized.',
+    comment: 'The Volcanic Sand Scrub and Moisturizer are stellar. After two weeks of use, my skin feels completely energized and razor bumps are gone.',
     date: '2026-06-25',
     approved: true,
   },
@@ -219,17 +265,17 @@ export const CUSTOM_GROOMING_KITS = [
     price: 89.00,
     rating: 5.0,
     reviewsCount: 210,
-    image: b4,
+    image: groomingKit,
     tag: 'Luxury Set'
   },
   {
     id: 'bk2',
     name: 'Anti-Fatigue Skincare Set',
-    description: 'Includes caffeine eye cream, SPF shield moisturizer, and volcanic sand scrub.',
+    description: 'Includes charcoal face wash, moisturizer, and volcanic sand scrub.',
     price: 65.00,
     rating: 4.9,
     reviewsCount: 148,
-    image: s3,
+    image: faceScrub,
     tag: 'Fresh Routine'
   }
 ];

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { supabase } from './supabaseClient';
 
 // Pages
 import CustomGrooming from './pages/CustomGrooming';
@@ -45,6 +46,17 @@ const NotFound = () => (
 );
 
 function App() {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*');
+      console.log('Supabase products data:', data);
+      if (error) {
+        console.error('Supabase products error:', error);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#08080a] text-[#f3f4f6] font-sans antialiased overflow-x-hidden selection:bg-[#C9A84C] selection:text-black flex flex-col justify-between">
       <div>
