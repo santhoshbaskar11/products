@@ -8,8 +8,10 @@ const AdminLayout = () => {
   const { user, adminUser } = useContext(AuthContext);
   const { toasts } = useContext(ShopContext);
 
-  // If not logged in, redirect to login page
-  if (!user && !adminUser) {
+  const isAdmin = adminUser || (user?.email && (user.email === 'admin@sovereign.com' || user.email === 'seed-admin@sovereign.com' || user.email === 'admin-seed@example.com'));
+
+  // If not logged in as admin, redirect to login page
+  if (!isAdmin) {
     return <Navigate to="/login" replace />;
   }
 

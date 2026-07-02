@@ -14,6 +14,8 @@ const Navbar = () => {
   const { adminUser, user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const isAdmin = adminUser || (user?.email && (user.email === 'admin@sovereign.com' || user.email === 'seed-admin@sovereign.com' || user.email === 'admin-seed@example.com'));
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 20) {
@@ -145,6 +147,15 @@ const Navbar = () => {
                 
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-40 rounded-xl bg-zinc-950 border border-white/10 py-2 shadow-xl z-50 text-left">
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="block w-full px-4 py-2.5 text-xs font-semibold hover:bg-zinc-900 hover:text-[#C9A84C] border-b border-white/5"
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
                     <Link
                       to="/profile"
                       onClick={() => setDropdownOpen(false)}
@@ -251,14 +262,31 @@ const Navbar = () => {
           <NavLink to="/custom-grooming" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Custom Grooming</NavLink>
 
           <div className="mt-6 border-t border-white/5 pt-4 flex flex-col gap-3">
-            {adminUser ? (
-              <Link
-                to="/admin"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#C9A84C] text-black py-3 text-sm font-bold uppercase tracking-wider"
-              >
-                <ShieldAlert className="h-4 w-4" /> Admin Panel
-              </Link>
+            {isAdmin ? (
+              <div className="space-y-3">
+                <div className="text-zinc-400 text-xs font-semibold px-1">
+                  Signed in as Administrator <span className="text-[#C9A84C]">{user?.user_metadata?.full_name || user?.email || 'Staff'}</span>
+                </div>
+                <div className="flex gap-3">
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#C9A84C] text-black py-3 text-sm font-bold uppercase tracking-wider"
+                  >
+                    <ShieldAlert className="h-4 w-4" /> Admin Panel
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setIsOpen(false);
+                      await logout();
+                      navigate('/');
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-950/40 border border-red-500/20 py-3 text-sm font-bold uppercase tracking-wider text-red-400 cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
             ) : user ? (
               <div className="space-y-3">
                 <div className="text-zinc-400 text-xs font-semibold px-1">
