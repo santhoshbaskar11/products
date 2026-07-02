@@ -4,8 +4,11 @@ import { ShopContext } from '../context/ShopContext';
 import SectionHeader from '../components/ui/SectionHeader';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, Sparkles, CheckCircle2 } from 'lucide-react';
 
+import { AuthContext } from '../context/AuthContext';
+
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart, createOrderFromCart } = useContext(ShopContext);
+  const { user } = useContext(AuthContext);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -18,7 +21,12 @@ const Cart = () => {
     setTimeout(() => {
       setIsCheckingOut(false);
       setShowCheckoutModal(true);
-      createOrderFromCart('Arthur Pendragon', 'arthur@camelot.com');
+      
+      const guestId = localStorage.getItem('sovereign_guest_customer_id') || Math.floor(Math.random() * 1000000).toString();
+      const email = user?.email || `guest-${guestId.slice(0, 8)}@sovereign.com`;
+      const name = user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : 'Guest Customer');
+      
+      createOrderFromCart(name, email);
     }, 1500);
   };
 
