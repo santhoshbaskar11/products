@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Search, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { Search, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Plus } from 'lucide-react';
 
 const AdminCustomOrders = () => {
-  const { customOrders, updateCustomOrder, updateCustomOrderStatus, deleteCustomOrder } = useContext(ShopContext);
+  const { customOrders, customers, addCustomOrder, updateCustomOrder, updateCustomOrderStatus, deleteCustomOrder } = useContext(ShopContext);
 
   // Search, filter, sorting, pagination states
   const [search, setSearch] = useState('');
@@ -24,6 +24,11 @@ const AdminCustomOrders = () => {
   const [status, setStatus] = useState('Processing');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+
+  // Manual custom order states
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [customerId, setCustomerId] = useState('');
+  const [priceInput, setPriceInput] = useState('85.00');
 
   // Filter custom orders
   let filtered = customOrders.filter((o) => {
@@ -99,12 +104,64 @@ const AdminCustomOrders = () => {
     }
   };
 
+  const handleOpenAdd = () => {
+    if (customers && customers.length > 0) {
+      setCustomerId(customers[0].id);
+    } else {
+      setCustomerId('');
+    }
+    setCategory('beard');
+    setBrand('Sovereign Lab');
+    setFragrance('Sandalwood Bourbon');
+    setPackaging(false);
+    setNotes('');
+    setPriceInput('85.00');
+    setStatus('Processing');
+    setAddModalOpen(true);
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!customerId || !notes) return;
+
+    const selectedCustObj = customers.find(c => c.id === customerId);
+    const addedId = `CUST-ORD-${Date.now().toString().slice(-4)}`;
+
+    const added = {
+      id: addedId,
+      customerId,
+      customer: selectedCustObj ? selectedCustObj.name : 'Unknown Customer',
+      email: selectedCustObj ? selectedCustObj.email : 'N/A',
+      category,
+      brand,
+      fragrance,
+      packaging,
+      notes,
+      price: parseFloat(priceInput) || 85.00,
+      status,
+      date: new Date().toISOString().slice(0, 10)
+    };
+
+    addCustomOrder(added);
+    setAddModalOpen(false);
+  };
+
   return (
     <div className="space-y-8 text-left relative">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Custom Grooming Orders</h2>
-        <p className="text-xs text-zinc-400 font-light mt-1">Audit personalized kits, customized engraving notes, and packaging upgrades.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Bespoke Custom Orders</h2>
+          <p className="text-xs text-zinc-400 font-light mt-1">Audit, configure, or fulfill unique wood-engraved grooming kit subscriptions.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 hover:scale-105 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Custom Order
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -449,6 +506,157 @@ const AdminCustomOrders = () => {
                 Yes, Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Add Custom Order Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setAddModalOpen(false)} className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+          
+          <div className="relative w-full max-w-lg bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto text-left animate-scale-up">
+            <button
+              onClick={() => setAddModalOpen(false)}
+              className="absolute right-6 top-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold font-serif text-white mb-6">Create Custom Grooming Order</h3>
+            
+            <form onSubmit={handleAddSubmit} className="space-y-5">
+              {/* Select Customer */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Customer</label>
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  required
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                >
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Category/Type */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Product Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    <option value="beard">Beard Grooming Kit</option>
+                    <option value="hair">Hair Styling Kit</option>
+                    <option value="skin">Skincare Essentials Kit</option>
+                  </select>
+                </div>
+
+                {/* Brand */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Woodwork Brand</label>
+                  <select
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    <option value="Sovereign Lab">Sovereign Lab Custom</option>
+                    <option value="Bourbon Barrel">Bourbon Barrel Aged</option>
+                    <option value="Royal Oak">Royal Oak Premium</option>
+                  </select>
+                </div>
+
+                {/* Fragrance */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Aroma Notes</label>
+                  <select
+                    value={fragrance}
+                    onChange={(e) => setFragrance(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    <option value="Sandalwood Bourbon">Sandalwood Bourbon</option>
+                    <option value="Cedarwood Forest">Cedarwood Forest</option>
+                    <option value="Vintage Leather">Vintage Leather</option>
+                  </select>
+                </div>
+
+                {/* Estimated Price */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Price Quote ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                  />
+                </div>
+              </div>
+
+              {/* Custom Note */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Bespoke Engraving Message</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. For Arthur - Est. 2026"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Order Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                >
+                  <option value="Processing">Processing</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+              </div>
+
+              {/* Packaging */}
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="packaging-add"
+                  checked={packaging}
+                  onChange={(e) => setPackaging(e.target.checked)}
+                  className="h-4.5 w-4.5 rounded bg-zinc-900 border-white/10 text-[#C9A84C] focus:ring-[#C9A84C]"
+                />
+                <label htmlFor="packaging-add" className="text-zinc-300 text-xs font-medium cursor-pointer">
+                  Upgrade with Premium Velvet Gift Wrapping (+$15.00)
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="rounded-xl border border-white/10 bg-transparent px-5 py-3 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-6 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 transition-all cursor-pointer"
+                >
+                  Save Custom Order
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

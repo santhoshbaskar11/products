@@ -24,3 +24,23 @@ CREATE POLICY "Allow public select" ON public.custom_grooming_orders FOR SELECT 
 CREATE POLICY "Allow public insert" ON public.custom_grooming_orders FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update" ON public.custom_grooming_orders FOR UPDATE USING (true);
 CREATE POLICY "Allow public delete" ON public.custom_grooming_orders FOR DELETE USING (true);
+
+-- SQL script to create the missing offers table in Supabase
+CREATE TABLE IF NOT EXISTS public.offers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  code text NOT NULL UNIQUE,
+  discount_percent integer NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
+
+-- Enable public select, insert, update, and delete access policies
+CREATE POLICY "Allow public select" ON public.offers FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON public.offers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update" ON public.offers FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete" ON public.offers FOR DELETE USING (true);

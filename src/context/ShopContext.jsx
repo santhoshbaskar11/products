@@ -23,6 +23,7 @@ export const ShopContextProvider = ({ children }) => {
   const [customers, setCustomers] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
   const [customOrders, setCustomOrders] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState([]);
 
@@ -69,6 +70,7 @@ export const ShopContextProvider = ({ children }) => {
       await loadOrders();
       await loadContactMessages();
       await loadCustomOrders();
+      await loadOffers();
       await loadCartAndWishlist(guestId);
     };
 
@@ -286,6 +288,51 @@ export const ShopContextProvider = ({ children }) => {
     }
   };
 
+  const loadOffers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('offers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mapped = data.map(o => ({
+          id: o.id,
+          code: o.code,
+          discountPercent: Number(o.discount_percent || 0),
+          active: o.active !== undefined ? o.active : true,
+          expiresAt: o.expires_at || '',
+          createdAt: o.created_at?.slice(0, 10)
+        }));
+        setOffers(mapped);
+      } else {
+        setOffers([
+          {
+            id: 'off-demo-1',
+            code: 'SOVEREIGN20',
+            discountPercent: 20,
+            active: true,
+            expiresAt: '2026-12-31',
+            createdAt: '2026-07-01'
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error("Offers load failed, using local mock:", e);
+      setOffers([
+        {
+          id: 'off-demo-1',
+          code: 'SOVEREIGN20',
+          discountPercent: 20,
+          active: true,
+          expiresAt: '2026-12-31',
+          createdAt: '2026-07-01'
+        }
+      ]);
+    }
+  };
+
   const loadCartAndWishlist = async (custId) => {
     try {
       // Cart
@@ -365,6 +412,32 @@ export const ShopContextProvider = ({ children }) => {
     }
   };
 
+  const addOrder = async (order) => {
+    setOrders((prev) => [order, ...prev]);
+    addToast(`Manual order ${order.id} registered.`);
+    try {
+      await supabase.from('orders').insert({
+        id: order.id,
+        customer_id: order.customerId,
+        total_amount: order.total,
+        payment_status: order.paymentStatus || 'Pending',
+        order_status: order.status || 'Processing',
+        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString()
+      });
+      if (order.items && order.items.length > 0) {
+        const itemsPayload = order.items.map(item => ({
+          order_id: order.id,
+          product_id: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price
+        }));
+        await supabase.from('order_items').insert(itemsPayload);
+      }
+    } catch (err) {
+      console.error("Supabase add order error:", err);
+    }
+  };
+
   // CRUD Order Handlers
   const deleteOrder = async (orderId) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
@@ -409,6 +482,22 @@ export const ShopContextProvider = ({ children }) => {
   };
 
   // CRUD Customer Handlers
+  const addCustomer = async (cust) => {
+    setCustomers((prev) => [cust, ...prev]);
+    addToast(`Customer ${cust.name} added to database.`);
+    try {
+      await supabase.from('customers').insert({
+        id: cust.id || generateUUID(),
+        full_name: cust.name,
+        email: cust.email,
+        phone: cust.phone || null,
+        address: cust.address || null
+      });
+    } catch (err) {
+      console.error("Supabase add customer error:", err);
+    }
+  };
+
   const updateCustomer = async (updatedCust) => {
     setCustomers((prev) => prev.map((c) => (c.id === updatedCust.id ? updatedCust : c)));
     addToast(`Customer ${updatedCust.name} profile successfully updated.`);
@@ -539,6 +628,28 @@ export const ShopContextProvider = ({ children }) => {
   };
 
   // CRUD Custom Orders Handlers
+  const addCustomOrder = async (order) => {
+    setCustomOrders((prev) => [order, ...prev]);
+    addToast(`Bespoke custom order created.`);
+    try {
+      await supabase.from('custom_grooming_orders').insert({
+        id: order.id || generateUUID(),
+        customer_id: order.customerId || guestCustomerId,
+        product_type: order.category,
+        brand: order.brand,
+        fragrance: order.fragrance,
+        quantity: order.quantity || 1,
+        gift_packaging: order.packaging || false,
+        custom_note: order.notes,
+        estimated_price: order.price,
+        status: order.status || 'Processing',
+        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Supabase add custom order error:", err);
+    }
+  };
+
   const updateCustomOrder = async (updatedOrder) => {
     setCustomOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
     addToast(`Custom order ${updatedOrder.id} successfully updated.`);
@@ -580,6 +691,48 @@ export const ShopContextProvider = ({ children }) => {
       await supabase.from('custom_grooming_orders').delete().eq('id', orderId);
     } catch (err) {
       console.error("Supabase delete custom order error:", err);
+    }
+  };
+
+  // CRUD Offers Handlers
+  const addOffer = async (offer) => {
+    setOffers((prev) => [offer, ...prev]);
+    addToast(`Coupon code ${offer.code} created!`);
+    try {
+      await supabase.from('offers').insert({
+        id: offer.id || generateUUID(),
+        code: offer.code,
+        discount_percent: offer.discountPercent,
+        active: offer.active !== undefined ? offer.active : true,
+        expires_at: offer.expiresAt ? `${offer.expiresAt}T00:00:00Z` : null
+      });
+    } catch (err) {
+      console.error("Supabase add offer error:", err);
+    }
+  };
+
+  const updateOffer = async (updatedOffer) => {
+    setOffers((prev) => prev.map((o) => (o.id === updatedOffer.id ? updatedOffer : o)));
+    addToast(`Coupon code ${updatedOffer.code} updated.`);
+    try {
+      await supabase.from('offers').update({
+        code: updatedOffer.code,
+        discount_percent: updatedOffer.discountPercent,
+        active: updatedOffer.active,
+        expires_at: updatedOffer.expiresAt ? `${updatedOffer.expiresAt}T00:00:00Z` : null
+      }).eq('id', updatedOffer.id);
+    } catch (err) {
+      console.error("Supabase update offer error:", err);
+    }
+  };
+
+  const deleteOffer = async (offerId) => {
+    setOffers((prev) => prev.filter((o) => o.id !== offerId));
+    addToast('Coupon code deleted.', 'warning');
+    try {
+      await supabase.from('offers').delete().eq('id', offerId);
+    } catch (err) {
+      console.error("Supabase delete offer error:", err);
     }
   };
 
@@ -890,15 +1043,18 @@ export const ShopContextProvider = ({ children }) => {
         customers,
         contactMessages,
         customOrders,
+        offers,
         toasts,
         searchQuery,
         setSearchQuery,
         addProduct,
         updateProduct,
         deleteProduct,
+        addOrder,
         deleteOrder,
         updateOrderStatus,
         updateOrderPaymentStatus,
+        addCustomer,
         updateCustomer,
         deleteCustomer,
         addReview,
@@ -909,9 +1065,13 @@ export const ShopContextProvider = ({ children }) => {
         addContactMessage,
         toggleMessageRead,
         deleteMessage,
+        addCustomOrder,
         updateCustomOrder,
         updateCustomOrderStatus,
         deleteCustomOrder,
+        addOffer,
+        updateOffer,
+        deleteOffer,
         addToCart,
         addCustomKitToCart,
         removeFromCart,

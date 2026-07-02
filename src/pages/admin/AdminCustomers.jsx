@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Search, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 const AdminCustomers = () => {
-  const { customers, updateCustomer, deleteCustomer } = useContext(ShopContext);
+  const { customers, addCustomer, updateCustomer, deleteCustomer } = useContext(ShopContext);
 
   // Search, sorting, pagination states
   const [search, setSearch] = useState('');
@@ -29,6 +29,14 @@ const AdminCustomers = () => {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedCustomers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const handleOpenAdd = () => {
+    setSelectedCust(null);
+    setName('');
+    setEmail('');
+    setTier('Standard');
+    setEditModalOpen(true);
+  };
+
   const handleOpenEdit = (cust) => {
     setSelectedCust(cust);
     setName(cust.name);
@@ -49,6 +57,17 @@ const AdminCustomers = () => {
         tier
       };
       updateCustomer(updated);
+    } else {
+      const added = {
+        id: `c-${Date.now()}`,
+        name,
+        email,
+        tier,
+        spending: 0,
+        ordersCount: 0,
+        date: new Date().toISOString().slice(0, 10)
+      };
+      addCustomer(added);
     }
     setEditModalOpen(false);
   };
@@ -69,9 +88,19 @@ const AdminCustomers = () => {
   return (
     <div className="space-y-8 text-left relative">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Customers List</h2>
-        <p className="text-xs text-zinc-400 font-light mt-1">Audit customer accounts, lifetime spending indices, and membership tiers.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Customers List</h2>
+          <p className="text-xs text-zinc-400 font-light mt-1">Audit customer accounts, lifetime spending indices, and membership tiers.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 hover:scale-105 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Customer
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -212,8 +241,8 @@ const AdminCustomers = () => {
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="text-xl font-bold text-white font-serif tracking-wide border-b border-white/5 pb-3">
-              Modify Customer Details
+            <h3 className="text-xl font-bold font-serif text-white mb-6">
+              {selectedCust ? 'Modify Customer Profile' : 'Create Customer Account'}
             </h3>
 
             <form onSubmit={handleEditSubmit} className="mt-6 space-y-5">

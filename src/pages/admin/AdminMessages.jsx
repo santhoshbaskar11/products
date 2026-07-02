@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Search, Mail, MailOpen, Trash2, ChevronLeft, ChevronRight, X, AlertTriangle } from 'lucide-react';
+import { Search, Mail, MailOpen, Trash2, ChevronLeft, ChevronRight, X, AlertTriangle, Plus } from 'lucide-react';
 
 const AdminMessages = () => {
-  const { contactMessages, toggleMessageRead, deleteMessage } = useContext(ShopContext);
+  const { contactMessages, addContactMessage, toggleMessageRead, deleteMessage } = useContext(ShopContext);
 
   // Search and pagination states
   const [search, setSearch] = useState('');
@@ -14,6 +14,12 @@ const AdminMessages = () => {
   const [msgOpen, setMsgOpen] = useState(null); // stores active message object to display
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [msgToDelete, setMsgToDelete] = useState(null);
+
+  // Manual message states
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [senderName, setSenderName] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
+  const [messageText, setMessageText] = useState('');
 
   // Filter messages
   let filtered = contactMessages.filter((m) =>
@@ -49,12 +55,46 @@ const AdminMessages = () => {
     }
   };
 
+  const handleOpenAdd = () => {
+    setSenderName('');
+    setSenderEmail('');
+    setMessageText('');
+    setAddModalOpen(true);
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!senderName || !senderEmail || !messageText) return;
+
+    const added = {
+      id: `msg-${Date.now()}`,
+      name: senderName,
+      email: senderEmail,
+      message: messageText,
+      unread: true,
+      date: new Date().toISOString().slice(0, 10)
+    };
+
+    addContactMessage(added);
+    setAddModalOpen(false);
+  };
+
   return (
     <div className="space-y-8 text-left relative">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Contact Messages Inbox</h2>
-        <p className="text-xs text-zinc-400 font-light mt-1">Audit customer inquiries, support requests, and business propositions.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Contact Messages Inbox</h2>
+          <p className="text-xs text-zinc-400 font-light mt-1">Audit customer inquiries, support requests, and business propositions.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 hover:scale-105 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Message
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -264,6 +304,82 @@ const AdminMessages = () => {
                 Yes, Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Add Message Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setAddModalOpen(false)} className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+          
+          <div className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl text-left animate-scale-up">
+            <button
+              onClick={() => setAddModalOpen(false)}
+              className="absolute right-6 top-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold font-serif text-white mb-6">Create Manual Support Ticket</h3>
+            
+            <form onSubmit={handleAddSubmit} className="space-y-5">
+              {/* Sender Name */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Sender Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Richard Hendricks"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                />
+              </div>
+
+              {/* Sender Email */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Sender Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. richard@piedpiper.com"
+                  value={senderEmail}
+                  onChange={(e) => setSenderEmail(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                />
+              </div>
+
+              {/* Message Text */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Message Content</label>
+                <textarea
+                  required
+                  rows="5"
+                  placeholder="Message body details..."
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] resize-none"
+                ></textarea>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="rounded-xl border border-white/10 bg-transparent px-5 py-3 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-6 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 transition-all cursor-pointer"
+                >
+                  Save Message
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

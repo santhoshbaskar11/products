@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Search, Eye, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { Search, Eye, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Plus } from 'lucide-react';
 
 const AdminOrders = () => {
-  const { orders, updateOrderStatus, updateOrderPaymentStatus, deleteOrder } = useContext(ShopContext);
+  const { orders, customers, products, addOrder, updateOrderStatus, updateOrderPaymentStatus, deleteOrder } = useContext(ShopContext);
 
   // Search, filter, sorting, pagination states
   const [search, setSearch] = useState('');
@@ -16,6 +16,15 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+
+  // Manual order states
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [customerId, setCustomerId] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('Pending');
+  const [orderStatus, setOrderStatus] = useState('Processing');
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [selectedQty, setSelectedQty] = useState(1);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   // Filter orders
   let filtered = orders.filter((o) => {
@@ -73,12 +82,79 @@ const AdminOrders = () => {
     }
   };
 
+  const handleOpenAdd = () => {
+    if (customers && customers.length > 0) {
+      setCustomerId(customers[0].id);
+    } else {
+      setCustomerId('');
+    }
+    setPaymentStatus('Pending');
+    setOrderStatus('Processing');
+    setSelectedProduct(products && products.length > 0 ? products[0].id : '');
+    setSelectedQty(1);
+    setSelectedItems([]);
+    setAddModalOpen(true);
+  };
+
+  const addItem = () => {
+    if (!selectedProduct) return;
+    const prod = products.find(p => p.id === selectedProduct);
+    if (!prod) return;
+
+    setSelectedItems(prev => {
+      const existing = prev.find(item => item.product.id === selectedProduct);
+      if (existing) {
+        return prev.map(item => item.product.id === selectedProduct ? { ...item, quantity: item.quantity + selectedQty } : item);
+      }
+      return [...prev, { product: prod, quantity: selectedQty }];
+    });
+  };
+
+  const removeItem = (prodId) => {
+    setSelectedItems(prev => prev.filter(item => item.product.id !== prodId));
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!customerId || selectedItems.length === 0) return;
+
+    const selectedCustomerObj = customers.find(c => c.id === customerId);
+    const orderId = `ORD-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`;
+    const totalAmount = selectedItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+    const added = {
+      id: orderId,
+      customerId,
+      customer: selectedCustomerObj ? selectedCustomerObj.name : 'Unknown Customer',
+      email: selectedCustomerObj ? selectedCustomerObj.email : 'N/A',
+      status: orderStatus,
+      paymentStatus,
+      amount: totalAmount,
+      total: totalAmount,
+      date: new Date().toISOString().slice(0, 10),
+      items: selectedItems
+    };
+
+    addOrder(added);
+    setAddModalOpen(false);
+  };
+
   return (
     <div className="space-y-8 text-left relative">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Client Orders</h2>
-        <p className="text-xs text-zinc-400 font-light mt-1">Audit transactions, print invoices, and update shipping operations status.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Client Orders</h2>
+          <p className="text-xs text-zinc-400 font-light mt-1">Audit transactions, print invoices, and update shipping operations status.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 hover:scale-105 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Order
+        </button>
       </div>
 
       {/* Filters bar */}
@@ -350,6 +426,164 @@ const AdminOrders = () => {
                 Yes, Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Add Order Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setAddModalOpen(false)} className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+          
+          <div className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto text-left animate-scale-up">
+            <button
+              onClick={() => setAddModalOpen(false)}
+              className="absolute right-6 top-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold font-serif text-white mb-6">Create Manual Order</h3>
+            
+            <form onSubmit={handleAddSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Select Customer */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Customer</label>
+                  <select
+                    value={customerId}
+                    onChange={(e) => setCustomerId(e.target.value)}
+                    required
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Select Payment Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Payment Status</label>
+                  <select
+                    value={paymentStatus}
+                    onChange={(e) => setPaymentStatus(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Refunded">Refunded</option>
+                  </select>
+                </div>
+
+                {/* Select Order Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Shipping Status</label>
+                  <select
+                    value={orderStatus}
+                    onChange={(e) => setOrderStatus(e.target.value)}
+                    className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    <option value="Processing">Processing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Order Items Configuration */}
+              <div className="border border-white/5 rounded-2xl p-4 space-y-4">
+                <h4 className="text-white font-serif text-sm font-semibold">Select Products & Quantities</h4>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Select Product */}
+                  <select
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
+                    className="flex-1 rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (${p.price.toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Quantity */}
+                  <input
+                    type="number"
+                    min="1"
+                    value={selectedQty}
+                    onChange={(e) => setSelectedQty(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 rounded-xl bg-zinc-900 border border-white/10 px-3 py-3 text-center text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                  />
+
+                  {/* Add Item Button */}
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    className="rounded-xl bg-[#C9A84C] text-black px-5 py-3 text-xs font-bold uppercase tracking-wider hover:brightness-110 cursor-pointer"
+                  >
+                    Add Line
+                  </button>
+                </div>
+
+                {/* Selected items table preview */}
+                {selectedItems.length > 0 && (
+                  <div className="bg-zinc-950 rounded-xl p-3 border border-white/10">
+                    <ul className="divide-y divide-white/5 text-xs text-zinc-400">
+                      {selectedItems.map((item) => (
+                        <li key={item.product.id} className="py-2.5 flex justify-between items-center gap-4">
+                          <div>
+                            <span className="font-semibold text-white">{item.product.name}</span>
+                            <span className="block mt-0.5 text-[10px] text-zinc-500">${item.product.price} each</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span>Qty: <strong className="text-white">{item.quantity}</strong></span>
+                            <span className="text-[#E8C97E] font-medium">${(item.product.price * item.quantity).toFixed(2)}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.product.id)}
+                              className="text-red-400 hover:text-red-500 font-semibold cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    {/* Compute Total */}
+                    <div className="border-t border-white/10 mt-3 pt-3 flex justify-between items-center text-xs">
+                      <span className="font-semibold uppercase tracking-wider text-zinc-500">Subtotal Amount:</span>
+                      <strong className="text-[#C9A84C] text-base font-extrabold">
+                        ${selectedItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0).toFixed(2)}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="rounded-xl border border-white/10 bg-transparent px-5 py-3 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={selectedItems.length === 0}
+                  className="rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-6 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  Register Order
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

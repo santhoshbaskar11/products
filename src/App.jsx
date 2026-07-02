@@ -28,6 +28,7 @@ import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminCustomOrders from './pages/admin/AdminCustomOrders';
+import AdminOffers from './pages/admin/AdminOffers';
 
 // 404 Page
 const NotFound = () => (
@@ -90,6 +91,11 @@ function App() {
       const { data: orderItemsData, error: orderItemsError } = await supabase.from('order_items').select('*');
       console.log('Supabase order items data:', orderItemsData);
       if (orderItemsError) console.error('Supabase order items error:', orderItemsError);
+
+      // 9. Offers
+      const { data: offersData, error: offersError } = await supabase.from('offers').select('*');
+      console.log('Supabase offers data:', offersData);
+      if (offersError) console.error('Supabase offers error:', offersError);
     };
     
     fetchSupabaseData();
@@ -128,6 +134,7 @@ function App() {
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="custom-orders" element={<AdminCustomOrders />} />
+            <Route path="offers" element={<AdminOffers />} />
           </Route>
 
           {/* 404 Route */}

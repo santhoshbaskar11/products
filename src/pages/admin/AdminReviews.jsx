@@ -1,9 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Search, Star, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Search, Star, Edit2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight, Eye, EyeOff, Plus } from 'lucide-react';
 
 const AdminReviews = () => {
-  const { reviews, approveReview, hideReview, updateReview, deleteReview } = useContext(ShopContext);
+  const { reviews, products, addReview, approveReview, hideReview, updateReview, deleteReview } = useContext(ShopContext);
 
   // Search, sorting, pagination states
   const [search, setSearch] = useState('');
@@ -18,6 +18,13 @@ const AdminReviews = () => {
   const [rating, setRating] = useState(5);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
+
+  // Manual review states
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [reviewerName, setReviewerName] = useState('');
+  const [selectedProdId, setSelectedProdId] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
 
   // Filter reviews
   let filtered = reviews.filter((r) => 
@@ -70,12 +77,49 @@ const AdminReviews = () => {
     }
   };
 
+  const handleOpenAdd = () => {
+    setReviewerName('');
+    setSelectedProdId(products && products.length > 0 ? products[0].id : '');
+    setReviewComment('');
+    setReviewRating(5);
+    setAddModalOpen(true);
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!reviewerName || !reviewComment) return;
+
+    const added = {
+      id: `rev-${Date.now()}`,
+      name: reviewerName,
+      comment: reviewComment,
+      rating: Number(reviewRating),
+      product_id: selectedProdId,
+      title: 'Verified Customer',
+      date: new Date().toISOString().slice(0, 10),
+      approved: true
+    };
+
+    addReview(added);
+    setAddModalOpen(false);
+  };
+
   return (
     <div className="space-y-8 text-left relative">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Reviews Moderation</h2>
-        <p className="text-xs text-zinc-400 font-light mt-1">Moderate client feedbacks, approve new review submissions, or delete flagged reviews.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white font-serif tracking-wide">Reviews Moderation</h2>
+          <p className="text-xs text-zinc-400 font-light mt-1">Moderate client feedbacks, approve new review submissions, or delete flagged reviews.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 hover:scale-105 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Add Review
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -337,6 +381,101 @@ const AdminReviews = () => {
                 Yes, Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Add Review Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setAddModalOpen(false)} className="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+          
+          <div className="relative w-full max-w-md bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl text-left animate-scale-up">
+            <button
+              onClick={() => setAddModalOpen(false)}
+              className="absolute right-6 top-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold font-serif text-white mb-6">Create Manual Review</h3>
+            
+            <form onSubmit={handleAddSubmit} className="space-y-5">
+              {/* Product */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Target Product</label>
+                <select
+                  value={selectedProdId}
+                  onChange={(e) => setSelectedProdId(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Reviewer Name */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Reviewer Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Richard Hendricks"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C]"
+                />
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Rating Score</label>
+                <select
+                  value={reviewRating}
+                  onChange={(e) => setReviewRating(parseInt(e.target.value))}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] cursor-pointer"
+                >
+                  <option value={5}>5 Stars (Excellent)</option>
+                  <option value={4}>4 Stars (Good)</option>
+                  <option value={3}>3 Stars (Fair)</option>
+                  <option value={2}>2 Stars (Poor)</option>
+                  <option value={1}>1 Star (Awful)</option>
+                </select>
+              </div>
+
+              {/* Comment Content */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Feedback details</label>
+                <textarea
+                  required
+                  rows="4"
+                  placeholder="Review comments..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-900 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A84C] resize-none"
+                ></textarea>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="rounded-xl border border-white/10 bg-transparent px-5 py-3 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] px-6 py-3 text-xs font-bold uppercase tracking-wider text-black hover:brightness-110 transition-all cursor-pointer"
+                >
+                  Publish Review
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
