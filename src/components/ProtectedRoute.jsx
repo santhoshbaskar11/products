@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, adminUser, loading } = useContext(AuthContext);
   const location = useLocation();
 
   if (loading) {
@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user && !adminUser) {
     // Redirect to login page and keep track of where the user was heading
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

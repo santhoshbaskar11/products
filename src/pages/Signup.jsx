@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
@@ -11,8 +11,15 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signup } = useContext(AuthContext);
+  const { signup, user } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // If already logged in, redirect directly to products catalog
+  useEffect(() => {
+    if (user) {
+      navigate('/products');
+    }
+  }, [user, navigate]);
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
