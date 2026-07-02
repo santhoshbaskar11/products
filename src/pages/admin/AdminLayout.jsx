@@ -5,11 +5,11 @@ import { ShopContext } from '../../context/ShopContext';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 
 const AdminLayout = () => {
-  const { adminUser } = useContext(AuthContext);
+  const { user, adminUser } = useContext(AuthContext);
   const { toasts } = useContext(ShopContext);
 
   // If not logged in, redirect to login page
-  if (!adminUser) {
+  if (!user && !adminUser) {
     return <Navigate to="/login" replace />;
   }
 
