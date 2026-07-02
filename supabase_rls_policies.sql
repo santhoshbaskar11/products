@@ -69,22 +69,49 @@ ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
 
 --------------------------------------------------------------------------------
 -- 4. Configure Policies
--- Each user can only select, insert, update, or delete their own records where
--- user_id matches their authenticated auth.uid().
+-- A. Public tables: products, reviews, offers can be viewed by anyone, but
+--    creation/modification is restricted to the authenticated user.
+-- B. Protected user tables: cart, wishlist, orders, etc., can only be viewed/modified
+--    by their owner (auth.uid() = user_id).
 --------------------------------------------------------------------------------
 
--- PRODUCTS
+-- PRODUCTS (Public Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on products" ON public.products;
+DROP POLICY IF EXISTS "Allow public select on products" ON public.products;
 DROP POLICY IF EXISTS "Allow user insert on products" ON public.products;
 DROP POLICY IF EXISTS "Allow user update on products" ON public.products;
 DROP POLICY IF EXISTS "Allow user delete on products" ON public.products;
 
-CREATE POLICY "Allow user select on products" ON public.products FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Allow public select on products" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Allow user insert on products" ON public.products FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user update on products" ON public.products FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on products" ON public.products FOR DELETE USING (auth.uid() = user_id);
 
--- CUSTOMERS
+-- OFFERS (Public Select, Protected Write)
+DROP POLICY IF EXISTS "Allow user select on offers" ON public.offers;
+DROP POLICY IF EXISTS "Allow public select on offers" ON public.offers;
+DROP POLICY IF EXISTS "Allow user insert on offers" ON public.offers;
+DROP POLICY IF EXISTS "Allow user update on offers" ON public.offers;
+DROP POLICY IF EXISTS "Allow user delete on offers" ON public.offers;
+
+CREATE POLICY "Allow public select on offers" ON public.offers FOR SELECT USING (true);
+CREATE POLICY "Allow user insert on offers" ON public.offers FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow user update on offers" ON public.offers FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow user delete on offers" ON public.offers FOR DELETE USING (auth.uid() = user_id);
+
+-- REVIEWS (Public Select, Protected Write)
+DROP POLICY IF EXISTS "Allow user select on reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Allow public select on reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Allow user insert on reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Allow user update on reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Allow user delete on reviews" ON public.reviews;
+
+CREATE POLICY "Allow public select on reviews" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Allow user insert on reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow user update on reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow user delete on reviews" ON public.reviews FOR DELETE USING (auth.uid() = user_id);
+
+-- CUSTOMERS (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on customers" ON public.customers;
 DROP POLICY IF EXISTS "Allow user insert on customers" ON public.customers;
 DROP POLICY IF EXISTS "Allow user update on customers" ON public.customers;
@@ -95,18 +122,7 @@ CREATE POLICY "Allow user insert on customers" ON public.customers FOR INSERT WI
 CREATE POLICY "Allow user update on customers" ON public.customers FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on customers" ON public.customers FOR DELETE USING (auth.uid() = user_id);
 
--- REVIEWS
-DROP POLICY IF EXISTS "Allow user select on reviews" ON public.reviews;
-DROP POLICY IF EXISTS "Allow user insert on reviews" ON public.reviews;
-DROP POLICY IF EXISTS "Allow user update on reviews" ON public.reviews;
-DROP POLICY IF EXISTS "Allow user delete on reviews" ON public.reviews;
-
-CREATE POLICY "Allow user select on reviews" ON public.reviews FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Allow user insert on reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Allow user update on reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Allow user delete on reviews" ON public.reviews FOR DELETE USING (auth.uid() = user_id);
-
--- ORDERS
+-- ORDERS (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on orders" ON public.orders;
 DROP POLICY IF EXISTS "Allow user insert on orders" ON public.orders;
 DROP POLICY IF EXISTS "Allow user update on orders" ON public.orders;
@@ -117,7 +133,7 @@ CREATE POLICY "Allow user insert on orders" ON public.orders FOR INSERT WITH CHE
 CREATE POLICY "Allow user update on orders" ON public.orders FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on orders" ON public.orders FOR DELETE USING (auth.uid() = user_id);
 
--- ORDER_ITEMS
+-- ORDER_ITEMS (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on order_items" ON public.order_items;
 DROP POLICY IF EXISTS "Allow user insert on order_items" ON public.order_items;
 DROP POLICY IF EXISTS "Allow user update on order_items" ON public.order_items;
@@ -128,7 +144,7 @@ CREATE POLICY "Allow user insert on order_items" ON public.order_items FOR INSER
 CREATE POLICY "Allow user update on order_items" ON public.order_items FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on order_items" ON public.order_items FOR DELETE USING (auth.uid() = user_id);
 
--- CONTACT_MESSAGES
+-- CONTACT_MESSAGES (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on contact_messages" ON public.contact_messages;
 DROP POLICY IF EXISTS "Allow user insert on contact_messages" ON public.contact_messages;
 DROP POLICY IF EXISTS "Allow user update on contact_messages" ON public.contact_messages;
@@ -139,7 +155,7 @@ CREATE POLICY "Allow user insert on contact_messages" ON public.contact_messages
 CREATE POLICY "Allow user update on contact_messages" ON public.contact_messages FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on contact_messages" ON public.contact_messages FOR DELETE USING (auth.uid() = user_id);
 
--- CUSTOM_GROOMING_ORDERS
+-- CUSTOM_GROOMING_ORDERS (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on custom_grooming_orders" ON public.custom_grooming_orders;
 DROP POLICY IF EXISTS "Allow user insert on custom_grooming_orders" ON public.custom_grooming_orders;
 DROP POLICY IF EXISTS "Allow user update on custom_grooming_orders" ON public.custom_grooming_orders;
@@ -150,18 +166,7 @@ CREATE POLICY "Allow user insert on custom_grooming_orders" ON public.custom_gro
 CREATE POLICY "Allow user update on custom_grooming_orders" ON public.custom_grooming_orders FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on custom_grooming_orders" ON public.custom_grooming_orders FOR DELETE USING (auth.uid() = user_id);
 
--- OFFERS
-DROP POLICY IF EXISTS "Allow user select on offers" ON public.offers;
-DROP POLICY IF EXISTS "Allow user insert on offers" ON public.offers;
-DROP POLICY IF EXISTS "Allow user update on offers" ON public.offers;
-DROP POLICY IF EXISTS "Allow user delete on offers" ON public.offers;
-
-CREATE POLICY "Allow user select on offers" ON public.offers FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Allow user insert on offers" ON public.offers FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Allow user update on offers" ON public.offers FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Allow user delete on offers" ON public.offers FOR DELETE USING (auth.uid() = user_id);
-
--- CART
+-- CART (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on cart" ON public.cart;
 DROP POLICY IF EXISTS "Allow user insert on cart" ON public.cart;
 DROP POLICY IF EXISTS "Allow user update on cart" ON public.cart;
@@ -172,7 +177,7 @@ CREATE POLICY "Allow user insert on cart" ON public.cart FOR INSERT WITH CHECK (
 CREATE POLICY "Allow user update on cart" ON public.cart FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow user delete on cart" ON public.cart FOR DELETE USING (auth.uid() = user_id);
 
--- WISHLIST
+-- WISHLIST (Protected Select, Protected Write)
 DROP POLICY IF EXISTS "Allow user select on wishlist" ON public.wishlist;
 DROP POLICY IF EXISTS "Allow user insert on wishlist" ON public.wishlist;
 DROP POLICY IF EXISTS "Allow user update on wishlist" ON public.wishlist;
