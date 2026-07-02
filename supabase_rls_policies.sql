@@ -69,13 +69,9 @@ ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
 
 --------------------------------------------------------------------------------
 -- 4. Configure Policies
--- A. Public tables: products, reviews, offers can be viewed by anyone, but
---    creation/modification is restricted to the authenticated user or admins.
--- B. Protected tables: cart, wishlist, orders, customers, etc. can be viewed/modified
---    only by their owner (auth.uid() = user_id) OR an administrator email.
 --------------------------------------------------------------------------------
 
--- Admin email check expression
+-- Helper expression for admin emails:
 -- auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com'
 
 -- PRODUCTS (Public Select, Protected Write)
@@ -114,79 +110,128 @@ CREATE POLICY "Allow user insert on reviews" ON public.reviews FOR INSERT WITH C
 CREATE POLICY "Allow user update on reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
 CREATE POLICY "Allow user delete on reviews" ON public.reviews FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
 
--- CUSTOMERS (Protected Select, Protected Write)
+-- CUSTOMERS
 DROP POLICY IF EXISTS "Allow user select on customers" ON public.customers;
 DROP POLICY IF EXISTS "Allow user insert on customers" ON public.customers;
 DROP POLICY IF EXISTS "Allow user update on customers" ON public.customers;
 DROP POLICY IF EXISTS "Allow user delete on customers" ON public.customers;
+DROP POLICY IF EXISTS "Allow authenticated customers CRUD" ON public.customers;
+DROP POLICY IF EXISTS "Allow anonymous customers CRUD" ON public.customers;
 
-CREATE POLICY "Allow user select on customers" ON public.customers FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on customers" ON public.customers FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on customers" ON public.customers FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on customers" ON public.customers FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+CREATE POLICY "Allow authenticated customers CRUD" ON public.customers
+  FOR ALL TO authenticated
+  USING (auth.uid() = id OR auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = id OR auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
 
--- ORDERS (Protected Select, Protected Write)
-DROP POLICY IF EXISTS "Allow user select on orders" ON public.orders;
-DROP POLICY IF EXISTS "Allow user insert on orders" ON public.orders;
-DROP POLICY IF EXISTS "Allow user update on orders" ON public.orders;
-DROP POLICY IF EXISTS "Allow user delete on orders" ON public.orders;
+CREATE POLICY "Allow anonymous customers CRUD" ON public.customers
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
 
-CREATE POLICY "Allow user select on orders" ON public.orders FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on orders" ON public.orders FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on orders" ON public.orders FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-
--- ORDER_ITEMS (Protected Select, Protected Write)
-DROP POLICY IF EXISTS "Allow user select on order_items" ON public.order_items;
-DROP POLICY IF EXISTS "Allow user insert on order_items" ON public.order_items;
-DROP POLICY IF EXISTS "Allow user update on order_items" ON public.order_items;
-DROP POLICY IF EXISTS "Allow user delete on order_items" ON public.order_items;
-
-CREATE POLICY "Allow user select on order_items" ON public.order_items FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on order_items" ON public.order_items FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on order_items" ON public.order_items FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on order_items" ON public.order_items FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-
--- CONTACT_MESSAGES (Protected Select, Protected Write)
-DROP POLICY IF EXISTS "Allow user select on contact_messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Allow user insert on contact_messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Allow user update on contact_messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Allow user delete on contact_messages" ON public.contact_messages;
-
-CREATE POLICY "Allow user select on contact_messages" ON public.contact_messages FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on contact_messages" ON public.contact_messages FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on contact_messages" ON public.contact_messages FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on contact_messages" ON public.contact_messages FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-
--- CUSTOM_GROOMING_ORDERS (Protected Select, Protected Write)
-DROP POLICY IF EXISTS "Allow user select on custom_grooming_orders" ON public.custom_grooming_orders;
-DROP POLICY IF EXISTS "Allow user insert on custom_grooming_orders" ON public.custom_grooming_orders;
-DROP POLICY IF EXISTS "Allow user update on custom_grooming_orders" ON public.custom_grooming_orders;
-DROP POLICY IF EXISTS "Allow user delete on custom_grooming_orders" ON public.custom_grooming_orders;
-
-CREATE POLICY "Allow user select on custom_grooming_orders" ON public.custom_grooming_orders FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on custom_grooming_orders" ON public.custom_grooming_orders FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on custom_grooming_orders" ON public.custom_grooming_orders FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on custom_grooming_orders" ON public.custom_grooming_orders FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-
--- CART (Protected Select, Protected Write)
+-- CART
 DROP POLICY IF EXISTS "Allow user select on cart" ON public.cart;
 DROP POLICY IF EXISTS "Allow user insert on cart" ON public.cart;
 DROP POLICY IF EXISTS "Allow user update on cart" ON public.cart;
 DROP POLICY IF EXISTS "Allow user delete on cart" ON public.cart;
+DROP POLICY IF EXISTS "Allow authenticated cart CRUD" ON public.cart;
+DROP POLICY IF EXISTS "Allow anonymous cart CRUD" ON public.cart;
 
-CREATE POLICY "Allow user select on cart" ON public.cart FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on cart" ON public.cart FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on cart" ON public.cart FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on cart" ON public.cart FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+CREATE POLICY "Allow authenticated cart CRUD" ON public.cart
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
 
--- WISHLIST (Protected Select, Protected Write)
+CREATE POLICY "Allow anonymous cart CRUD" ON public.cart
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
+
+-- WISHLIST
 DROP POLICY IF EXISTS "Allow user select on wishlist" ON public.wishlist;
 DROP POLICY IF EXISTS "Allow user insert on wishlist" ON public.wishlist;
 DROP POLICY IF EXISTS "Allow user update on wishlist" ON public.wishlist;
 DROP POLICY IF EXISTS "Allow user delete on wishlist" ON public.wishlist;
+DROP POLICY IF EXISTS "Allow authenticated wishlist CRUD" ON public.wishlist;
+DROP POLICY IF EXISTS "Allow anonymous wishlist CRUD" ON public.wishlist;
 
-CREATE POLICY "Allow user select on wishlist" ON public.wishlist FOR SELECT USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user insert on wishlist" ON public.wishlist FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user update on wishlist" ON public.wishlist FOR UPDATE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com') WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
-CREATE POLICY "Allow user delete on wishlist" ON public.wishlist FOR DELETE USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+CREATE POLICY "Allow authenticated wishlist CRUD" ON public.wishlist
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+
+CREATE POLICY "Allow anonymous wishlist CRUD" ON public.wishlist
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
+
+-- ORDERS
+DROP POLICY IF EXISTS "Allow user select on orders" ON public.orders;
+DROP POLICY IF EXISTS "Allow user insert on orders" ON public.orders;
+DROP POLICY IF EXISTS "Allow user update on orders" ON public.orders;
+DROP POLICY IF EXISTS "Allow user delete on orders" ON public.orders;
+DROP POLICY IF EXISTS "Allow authenticated orders CRUD" ON public.orders;
+DROP POLICY IF EXISTS "Allow anonymous orders CRUD" ON public.orders;
+
+CREATE POLICY "Allow authenticated orders CRUD" ON public.orders
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+
+CREATE POLICY "Allow anonymous orders CRUD" ON public.orders
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
+
+-- ORDER_ITEMS
+DROP POLICY IF EXISTS "Allow user select on order_items" ON public.order_items;
+DROP POLICY IF EXISTS "Allow user insert on order_items" ON public.order_items;
+DROP POLICY IF EXISTS "Allow user update on order_items" ON public.order_items;
+DROP POLICY IF EXISTS "Allow user delete on order_items" ON public.order_items;
+DROP POLICY IF EXISTS "Allow authenticated order_items CRUD" ON public.order_items;
+DROP POLICY IF EXISTS "Allow anonymous order_items CRUD" ON public.order_items;
+
+CREATE POLICY "Allow authenticated order_items CRUD" ON public.order_items
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+
+CREATE POLICY "Allow anonymous order_items CRUD" ON public.order_items
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
+
+-- CONTACT_MESSAGES
+DROP POLICY IF EXISTS "Allow user select on contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow user insert on contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow user update on contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow user delete on contact_messages" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow authenticated contact_messages CRUD" ON public.contact_messages;
+DROP POLICY IF EXISTS "Allow anonymous contact_messages CRUD" ON public.contact_messages;
+
+CREATE POLICY "Allow authenticated contact_messages CRUD" ON public.contact_messages
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+
+CREATE POLICY "Allow anonymous contact_messages CRUD" ON public.contact_messages
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);
+
+-- CUSTOM_GROOMING_ORDERS
+DROP POLICY IF EXISTS "Allow user select on custom_grooming_orders" ON public.custom_grooming_orders;
+DROP POLICY IF EXISTS "Allow user insert on custom_grooming_orders" ON public.custom_grooming_orders;
+DROP POLICY IF EXISTS "Allow user update on custom_grooming_orders" ON public.custom_grooming_orders;
+DROP POLICY IF EXISTS "Allow user delete on custom_grooming_orders" ON public.custom_grooming_orders;
+DROP POLICY IF EXISTS "Allow authenticated custom_grooming_orders CRUD" ON public.custom_grooming_orders;
+DROP POLICY IF EXISTS "Allow anonymous custom_grooming_orders CRUD" ON public.custom_grooming_orders;
+
+CREATE POLICY "Allow authenticated custom_grooming_orders CRUD" ON public.custom_grooming_orders
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com')
+  WITH CHECK (auth.uid() = user_id OR auth.jwt() ->> 'email' = 'seed-admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin@sovereign.com' OR auth.jwt() ->> 'email' = 'admin-seed@example.com');
+
+CREATE POLICY "Allow anonymous custom_grooming_orders CRUD" ON public.custom_grooming_orders
+  FOR ALL TO anon
+  USING (user_id IS NULL)
+  WITH CHECK (user_id IS NULL);

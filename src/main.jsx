@@ -9,11 +9,11 @@ import App from './App.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <HashRouter>
-      <ShopContextProvider>
-        <AuthContextProvider>
+      <AuthContextProvider>
+        <ShopContextProvider>
           <App />
-        </AuthContextProvider>
-      </ShopContextProvider>
+        </ShopContextProvider>
+      </AuthContextProvider>
     </HashRouter>
   </StrictMode>,
 )

@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { ALL_PRODUCTS, REVIEWS as INITIAL_REVIEWS } from '../data/products';
 import { supabase } from '../supabaseClient';
+import { AuthContext } from './AuthContext';
 
 export const ShopContext = createContext(null);
 
@@ -14,6 +15,8 @@ const generateUUID = () => {
 };
 
 export const ShopContextProvider = ({ children }) => {
+  const { user } = useContext(AuthContext);
+
   // State definitions
   const [products, setProducts] = useState(ALL_PRODUCTS);
   const [cart, setCart] = useState([]);
@@ -47,6 +50,30 @@ export const ShopContextProvider = ({ children }) => {
     }
   };
 
+  // Helper to ensure customer record exists
+  const ensureCustomerRecord = async (id, name, email) => {
+    try {
+      const { data, error } = await supabase.from('customers').select('id').eq('id', id).limit(1);
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        const userPayload = await getUserIdPayload();
+        await supabase.from('customers').insert({
+          id,
+          full_name: name,
+          email,
+          ...userPayload
+        });
+      }
+    } catch (err) {
+      console.error("Error ensuring customer record exists:", err);
+    }
+  };
+
+  // Helper to get active customer ID
+  const getActiveCustomerId = () => {
+    return user?.id || guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+  };
+
   // 1. Initialize Guest Customer ID and load all tables
   useEffect(() => {
     const initializeDatabase = async () => {
@@ -58,33 +85,33 @@ export const ShopContextProvider = ({ children }) => {
       }
       setGuestCustomerId(guestId);
 
-      // Verify guest customer exists in DB, if not insert it
-      try {
-        const { data: existingCust } = await supabase.from('customers').select('id').eq('id', guestId);
-        if (!existingCust || existingCust.length === 0) {
-          await supabase.from('customers').insert({
-            id: guestId,
-            full_name: 'Guest Customer',
-            email: `guest-${guestId.slice(0, 8)}@sovereign.com`
-          });
-        }
-      } catch (err) {
-        console.error("Guest customer sync failed", err);
+      // Load products, reviews, and offers (public catalog elements)
+      await loadProducts();
+      await loadReviews();
+      await loadOffers();
+
+      // Ensure customer record exists in DB for either user or guest
+      const activeId = user?.id || guestId;
+      if (user) {
+        await ensureCustomerRecord(user.id, user.user_metadata?.full_name || user.email.split('@')[0], user.email);
+      } else {
+        await ensureCustomerRecord(guestId, 'Guest Customer', `guest-${guestId.slice(0, 8)}@sovereign.com`);
       }
 
-      // Fetch all tables
-      await loadProducts();
+      // Reset cart/wishlist before loading so data doesn't leak between logouts
+      setCart([]);
+      setWishlist([]);
+
+      // Load user-specific data
       await loadCustomers();
-      await loadReviews();
       await loadOrders();
       await loadContactMessages();
       await loadCustomOrders();
-      await loadOffers();
-      await loadCartAndWishlist(guestId);
+      await loadCartAndWishlist(activeId);
     };
 
     initializeDatabase();
-  }, []);
+  }, [user]);
 
   // Database Load Handlers
   const loadProducts = async () => {
@@ -547,23 +574,14 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Review submitted for moderation.');
 
     try {
+      const activeId = getActiveCustomerId();
       const userPayload = await getUserIdPayload();
-      // Find or insert mock customer for review visibility
-      let custId = guestCustomerId;
-      const { data: existing } = await supabase.from('customers').select('id').eq('email', review.name.toLowerCase().replace(/\s+/g, '') + '@example.com');
-      if (existing && existing.length > 0) {
-        custId = existing[0].id;
-      } else {
-        const { data: newCust } = await supabase.from('customers').insert({
-          full_name: review.name,
-          email: review.name.toLowerCase().replace(/\s+/g, '') + '@example.com',
-          ...userPayload
-        }).select();
-        if (newCust && newCust.length > 0) custId = newCust[0].id;
-      }
+      
+      // Ensure customer record exists in DB
+      await ensureCustomerRecord(activeId, review.name, review.name.toLowerCase().replace(/\s+/g, '') + '@example.com');
 
       await supabase.from('reviews').insert({
-        customer_id: custId,
+        customer_id: activeId,
         product_id: review.product_id || 'b1',
         rating: review.rating,
         review: review.comment,
@@ -653,10 +671,11 @@ export const ShopContextProvider = ({ children }) => {
     setCustomOrders((prev) => [order, ...prev]);
     addToast(`Bespoke custom order created.`);
     try {
+      const activeId = getActiveCustomerId();
       const userPayload = await getUserIdPayload();
       await supabase.from('custom_grooming_orders').insert({
         id: order.id || generateUUID(),
-        customer_id: order.customerId || guestCustomerId,
+        customer_id: order.customerId || activeId,
         product_type: order.category,
         brand: order.brand,
         fragrance: order.fragrance,
@@ -780,7 +799,7 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Product added to shopping bag!');
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         const { data: existing } = await supabase.from('cart').select('*').eq('customer_id', custId).eq('product_id', productId).limit(1);
         if (existing && existing.length > 0) {
@@ -842,7 +861,7 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Item removed from shopping bag.', 'warning');
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         await supabase.from('cart').delete().eq('customer_id', custId).eq('product_id', productId);
       }
@@ -863,7 +882,7 @@ export const ShopContextProvider = ({ children }) => {
     );
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         await supabase.from('cart').update({ quantity }).eq('customer_id', custId).eq('product_id', productId);
       }
@@ -876,7 +895,7 @@ export const ShopContextProvider = ({ children }) => {
     setCart([]);
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         await supabase.from('cart').delete().eq('customer_id', custId);
       }
@@ -938,71 +957,55 @@ export const ShopContextProvider = ({ children }) => {
 
     // Sync checkout process to Supabase database
     try {
+      const activeId = getActiveCustomerId();
       const userPayload = await getUserIdPayload();
-      // Find or insert customer details
-      let customerUuid;
-      const { data: cust } = await supabase.from('customers').select('id').eq('email', email).limit(1);
-      if (cust && cust.length > 0) {
-        customerUuid = cust[0].id;
-        await supabase.from('customers').update({ full_name: name }).eq('id', customerUuid);
-      } else {
-        const { data: newCust } = await supabase.from('customers').insert({
-          full_name: name,
-          email: email,
-          ...userPayload
-        }).select();
-        if (newCust && newCust.length > 0) customerUuid = newCust[0].id;
-      }
+      
+      // Ensure customer record exists in database
+      await ensureCustomerRecord(activeId, name, email);
 
-      if (customerUuid) {
-        // Insert main order record
-        const { data: newOrd } = await supabase.from('orders').insert({
-          customer_id: customerUuid,
-          total_amount: newOrder.amount,
-          payment_status: 'Paid',
-          order_status: 'Processing',
-          ...userPayload
-        }).select();
+      // Insert main order record
+      const { data: newOrd } = await supabase.from('orders').insert({
+        customer_id: activeId,
+        total_amount: newOrder.amount,
+        payment_status: 'Paid',
+        order_status: 'Processing',
+        ...userPayload
+      }).select();
 
-        if (newOrd && newOrd.length > 0) {
-          const mainOrderId = newOrd[0].id;
-          
-          // Insert order line items
-          for (const item of cart) {
-            // Note: If it is a custom kit, it's not a preloaded product. So we fall back to 'b1' or another product ID,
-            // or we insert the custom kit details. We will insert custom kits with product_id = 'b1' for relation checks
-            // and log detailed custom grooming specifications.
-            const prodId = item.isCustom ? 'b1' : item.product.id;
-            await supabase.from('order_items').insert({
-              order_id: mainOrderId,
-              product_id: prodId,
+      if (newOrd && newOrd.length > 0) {
+        const mainOrderId = newOrd[0].id;
+        
+        // Insert order line items
+        for (const item of cart) {
+          const prodId = item.isCustom ? 'b1' : item.product.id;
+          await supabase.from('order_items').insert({
+            order_id: mainOrderId,
+            product_id: prodId,
+            quantity: item.quantity,
+            price: item.product.price,
+            ...userPayload
+          });
+
+          // Insert custom orders details in custom_grooming_orders if applicable
+          if (item.isCustom) {
+            await supabase.from('custom_grooming_orders').insert({
+              customer_id: activeId,
+              product_type: item.product.category,
+              brand: item.product.brand,
+              fragrance: item.product.fragrance,
               quantity: item.quantity,
-              price: item.product.price,
+              gift_packaging: item.product.packaging,
+              custom_note: item.product.notes,
+              estimated_price: item.product.price,
               ...userPayload
             });
-
-            // Insert custom orders details in custom_grooming_orders if applicable
-            if (item.isCustom) {
-              await supabase.from('custom_grooming_orders').insert({
-                customer_id: customerUuid,
-                product_type: item.product.category,
-                brand: item.product.brand,
-                fragrance: item.product.fragrance,
-                quantity: item.quantity,
-                gift_packaging: item.product.packaging,
-                custom_note: item.product.notes,
-                estimated_price: item.product.price,
-                ...userPayload
-              });
-            }
           }
         }
       }
 
       // Clear remote cart
-      const guestId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
-      if (guestId) {
-        await supabase.from('cart').delete().eq('customer_id', guestId);
+      if (activeId) {
+        await supabase.from('cart').delete().eq('customer_id', activeId);
       }
 
       // Refresh data
@@ -1028,7 +1031,7 @@ export const ShopContextProvider = ({ children }) => {
     });
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         if (exists) {
           await supabase.from('wishlist').delete().eq('customer_id', custId).eq('product_id', product.id);
@@ -1051,7 +1054,7 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Removed from wishlist.', 'warning');
 
     try {
-      const custId = guestCustomerId || localStorage.getItem('sovereign_guest_customer_id');
+      const custId = getActiveCustomerId();
       if (custId) {
         await supabase.from('wishlist').delete().eq('customer_id', custId).eq('product_id', productId);
       }
