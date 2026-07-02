@@ -455,25 +455,31 @@ export const ShopContextProvider = ({ children }) => {
     addToast(`Manual order ${order.id} registered.`);
     try {
       const userPayload = await getUserIdPayload();
-      await supabase.from('orders').insert({
-        id: order.id,
+      // Insert order — let DB generate UUID, do NOT pass string order.id as PK
+      const { data: newOrd, error: ordErr } = await supabase.from('orders').insert({
         customer_id: order.customerId,
-        total_amount: order.total,
+        total_amount: order.amount || order.total || 0,
         payment_status: order.paymentStatus || 'Pending',
         order_status: order.status || 'Processing',
-        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString(),
         ...userPayload
-      });
-      if (order.items && order.items.length > 0) {
+      }).select();
+      if (ordErr) {
+        console.error("Supabase add order error:", ordErr.message);
+        return;
+      }
+      if (newOrd && newOrd.length > 0 && order.items && order.items.length > 0) {
+        const mainOrderId = newOrd[0].id;
         const itemsPayload = order.items.map(item => ({
-          order_id: order.id,
-          product_id: item.product.id,
+          order_id: mainOrderId,
+          product_id: item.product?.id || 'b1',
           quantity: item.quantity,
-          price: item.product.price,
+          price: item.product?.price || 0,
           ...userPayload
         }));
         await supabase.from('order_items').insert(itemsPayload);
       }
+      // Refresh orders from DB so admin panel shows real UUID
+      await loadOrders();
     } catch (err) {
       console.error("Supabase add order error:", err);
     }
@@ -637,13 +643,14 @@ export const ShopContextProvider = ({ children }) => {
 
     try {
       const userPayload = await getUserIdPayload();
-      await supabase.from('contact_messages').insert({
-        id: msg.id || generateUUID(),
+      // user_id may be null for anonymous contact form submissions - that's ok
+      const { error } = await supabase.from('contact_messages').insert({
         name: msg.name,
         email: msg.email,
         message: msg.message,
-        ...userPayload
+        ...(userPayload.user_id ? userPayload : {})
       });
+      if (error) console.error("Supabase add contact message error:", error.message);
     } catch (err) {
       console.error("Supabase add contact message error:", err);
     }
