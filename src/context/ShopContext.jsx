@@ -38,6 +38,15 @@ export const ShopContextProvider = ({ children }) => {
     }, 3000);
   };
 
+  const getUserIdPayload = async () => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      return data?.user ? { user_id: data.user.id } : {};
+    } catch (e) {
+      return {};
+    }
+  };
+
   // 1. Initialize Guest Customer ID and load all tables
   useEffect(() => {
     const initializeDatabase = async () => {
@@ -367,6 +376,7 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Product successfully added to catalog!');
 
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('products').insert({
         id: product.id,
         name: product.name,
@@ -376,7 +386,8 @@ export const ShopContextProvider = ({ children }) => {
         reviews_count: product.reviewsCount || 0,
         tag: product.tag,
         category: product.category,
-        image_url: product.id
+        image_url: product.id,
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase insert product error:", err);
@@ -416,20 +427,23 @@ export const ShopContextProvider = ({ children }) => {
     setOrders((prev) => [order, ...prev]);
     addToast(`Manual order ${order.id} registered.`);
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('orders').insert({
         id: order.id,
         customer_id: order.customerId,
         total_amount: order.total,
         payment_status: order.paymentStatus || 'Pending',
         order_status: order.status || 'Processing',
-        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString()
+        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString(),
+        ...userPayload
       });
       if (order.items && order.items.length > 0) {
         const itemsPayload = order.items.map(item => ({
           order_id: order.id,
           product_id: item.product.id,
           quantity: item.quantity,
-          price: item.product.price
+          price: item.product.price,
+          ...userPayload
         }));
         await supabase.from('order_items').insert(itemsPayload);
       }
@@ -486,12 +500,14 @@ export const ShopContextProvider = ({ children }) => {
     setCustomers((prev) => [cust, ...prev]);
     addToast(`Customer ${cust.name} added to database.`);
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('customers').insert({
         id: cust.id || generateUUID(),
         full_name: cust.name,
         email: cust.email,
         phone: cust.phone || null,
-        address: cust.address || null
+        address: cust.address || null,
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase add customer error:", err);
@@ -531,6 +547,7 @@ export const ShopContextProvider = ({ children }) => {
     addToast('Review submitted for moderation.');
 
     try {
+      const userPayload = await getUserIdPayload();
       // Find or insert mock customer for review visibility
       let custId = guestCustomerId;
       const { data: existing } = await supabase.from('customers').select('id').eq('email', review.name.toLowerCase().replace(/\s+/g, '') + '@example.com');
@@ -539,7 +556,8 @@ export const ShopContextProvider = ({ children }) => {
       } else {
         const { data: newCust } = await supabase.from('customers').insert({
           full_name: review.name,
-          email: review.name.toLowerCase().replace(/\s+/g, '') + '@example.com'
+          email: review.name.toLowerCase().replace(/\s+/g, '') + '@example.com',
+          ...userPayload
         }).select();
         if (newCust && newCust.length > 0) custId = newCust[0].id;
       }
@@ -548,7 +566,8 @@ export const ShopContextProvider = ({ children }) => {
         customer_id: custId,
         product_id: review.product_id || 'b1',
         rating: review.rating,
-        review: review.comment
+        review: review.comment,
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase add review error:", err);
@@ -599,11 +618,13 @@ export const ShopContextProvider = ({ children }) => {
     setContactMessages((prev) => [msg, ...prev]);
 
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('contact_messages').insert({
         id: msg.id || generateUUID(),
         name: msg.name,
         email: msg.email,
-        message: msg.message
+        message: msg.message,
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase add contact message error:", err);
@@ -632,6 +653,7 @@ export const ShopContextProvider = ({ children }) => {
     setCustomOrders((prev) => [order, ...prev]);
     addToast(`Bespoke custom order created.`);
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('custom_grooming_orders').insert({
         id: order.id || generateUUID(),
         customer_id: order.customerId || guestCustomerId,
@@ -643,7 +665,8 @@ export const ShopContextProvider = ({ children }) => {
         custom_note: order.notes,
         estimated_price: order.price,
         status: order.status || 'Processing',
-        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString()
+        created_at: order.date ? `${order.date}T00:00:00Z` : new Date().toISOString(),
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase add custom order error:", err);
@@ -699,12 +722,14 @@ export const ShopContextProvider = ({ children }) => {
     setOffers((prev) => [offer, ...prev]);
     addToast(`Coupon code ${offer.code} created!`);
     try {
+      const userPayload = await getUserIdPayload();
       await supabase.from('offers').insert({
         id: offer.id || generateUUID(),
         code: offer.code,
         discount_percent: offer.discountPercent,
         active: offer.active !== undefined ? offer.active : true,
-        expires_at: offer.expiresAt ? `${offer.expiresAt}T00:00:00Z` : null
+        expires_at: offer.expiresAt ? `${offer.expiresAt}T00:00:00Z` : null,
+        ...userPayload
       });
     } catch (err) {
       console.error("Supabase add offer error:", err);
@@ -761,7 +786,13 @@ export const ShopContextProvider = ({ children }) => {
         if (existing && existing.length > 0) {
           await supabase.from('cart').update({ quantity: existing[0].quantity + qty }).eq('id', existing[0].id);
         } else {
-          await supabase.from('cart').insert({ customer_id: custId, product_id: productId, quantity: qty });
+          const userPayload = await getUserIdPayload();
+          await supabase.from('cart').insert({ 
+            customer_id: custId, 
+            product_id: productId, 
+            quantity: qty,
+            ...userPayload
+          });
         }
       }
     } catch (err) {
@@ -907,6 +938,7 @@ export const ShopContextProvider = ({ children }) => {
 
     // Sync checkout process to Supabase database
     try {
+      const userPayload = await getUserIdPayload();
       // Find or insert customer details
       let customerUuid;
       const { data: cust } = await supabase.from('customers').select('id').eq('email', email).limit(1);
@@ -916,7 +948,8 @@ export const ShopContextProvider = ({ children }) => {
       } else {
         const { data: newCust } = await supabase.from('customers').insert({
           full_name: name,
-          email: email
+          email: email,
+          ...userPayload
         }).select();
         if (newCust && newCust.length > 0) customerUuid = newCust[0].id;
       }
@@ -927,7 +960,8 @@ export const ShopContextProvider = ({ children }) => {
           customer_id: customerUuid,
           total_amount: newOrder.amount,
           payment_status: 'Paid',
-          order_status: 'Processing'
+          order_status: 'Processing',
+          ...userPayload
         }).select();
 
         if (newOrd && newOrd.length > 0) {
@@ -943,7 +977,8 @@ export const ShopContextProvider = ({ children }) => {
               order_id: mainOrderId,
               product_id: prodId,
               quantity: item.quantity,
-              price: item.product.price
+              price: item.product.price,
+              ...userPayload
             });
 
             // Insert custom orders details in custom_grooming_orders if applicable
@@ -956,7 +991,8 @@ export const ShopContextProvider = ({ children }) => {
                 quantity: item.quantity,
                 gift_packaging: item.product.packaging,
                 custom_note: item.product.notes,
-                estimated_price: item.product.price
+                estimated_price: item.product.price,
+                ...userPayload
               });
             }
           }
@@ -997,7 +1033,12 @@ export const ShopContextProvider = ({ children }) => {
         if (exists) {
           await supabase.from('wishlist').delete().eq('customer_id', custId).eq('product_id', product.id);
         } else {
-          await supabase.from('wishlist').insert({ customer_id: custId, product_id: product.id });
+          const userPayload = await getUserIdPayload();
+          await supabase.from('wishlist').insert({ 
+            customer_id: custId, 
+            product_id: product.id,
+            ...userPayload
+          });
         }
       }
     } catch (err) {

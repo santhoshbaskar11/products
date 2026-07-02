@@ -24,7 +24,15 @@ const makeMockChain = () => {
 };
 
 const mockSupabase = {
-  from: () => makeMockChain()
+  from: () => makeMockChain(),
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
+    signUp: () => Promise.resolve({ data: { user: null }, error: null }),
+    signOut: () => Promise.resolve({ error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null })
+  }
 };
 
 let client = mockSupabase;
