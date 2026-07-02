@@ -18,6 +18,8 @@ import Contact from './pages/Contact';
 import Wishlist from './pages/Wishlist';
 import Cart from './pages/Cart';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Profile from './pages/Profile';
 
 // Admin Subpages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -123,6 +125,8 @@ function App() {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/custom-grooming" element={<CustomGrooming />} />
 
           {/* Protected Admin Routes */}

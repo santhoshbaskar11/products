@@ -8,9 +8,10 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const { getCartCount, wishlist, searchQuery, setSearchQuery } = useContext(ShopContext);
-  const { adminUser } = useContext(AuthContext);
+  const { adminUser, user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -123,7 +124,7 @@ const Navbar = () => {
               )}
             </Link>
 
-            {/* Admin / Account Link */}
+            {/* Admin / User Dropdown / Auth Links */}
             {adminUser ? (
               <Link
                 to="/admin"
@@ -132,10 +133,53 @@ const Navbar = () => {
                 <ShieldAlert className="h-4 w-4" />
                 Admin
               </Link>
+            ) : user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white border border-white/10 bg-zinc-900/60 px-4 py-2 rounded-xl hover:border-[#C9A84C]/50 cursor-pointer"
+                >
+                  <User className="h-4 w-4 text-[#C9A84C]" />
+                  <span>{user.user_metadata?.full_name || user.email.split('@')[0]}</span>
+                </button>
+                
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-40 rounded-xl bg-zinc-950 border border-white/10 py-2 shadow-xl z-50 text-left">
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="block w-full px-4 py-2.5 text-xs font-semibold hover:bg-zinc-900 hover:text-[#C9A84C]"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        setDropdownOpen(false);
+                        await logout();
+                        navigate('/');
+                      }}
+                      className="block w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-zinc-900 hover:text-red-400 cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <Link to="/login" className="text-gray-300 hover:text-[#E8C97E] transition-colors duration-300">
-                <User className="h-5 w-5" />
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/login"
+                  className="text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-[#C9A84C] px-3 py-2 transition-colors duration-300"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className="text-xs font-bold uppercase tracking-wider text-black bg-[#C9A84C] hover:brightness-110 px-4 py-2 rounded-xl transition-all duration-300"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
             
             <a
@@ -206,28 +250,62 @@ const Navbar = () => {
           <NavLink to="/contact" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Contact Us</NavLink>
           <NavLink to="/custom-grooming" onClick={() => setIsOpen(false)} className={mobileNavLinkClass}>Custom Grooming</NavLink>
 
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-6 border-t border-white/5 pt-4 flex flex-col gap-3">
             {adminUser ? (
               <Link
                 to="/admin"
                 onClick={() => setIsOpen(false)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#C9A84C] text-black py-3 text-sm font-bold uppercase tracking-wider"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#C9A84C] text-black py-3 text-sm font-bold uppercase tracking-wider"
               >
                 <ShieldAlert className="h-4 w-4" /> Admin Panel
               </Link>
+            ) : user ? (
+              <div className="space-y-3">
+                <div className="text-zinc-400 text-xs font-semibold px-1">
+                  Signed in as <span className="text-[#C9A84C]">{user.user_metadata?.full_name || user.email}</span>
+                </div>
+                <div className="flex gap-3">
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 border border-white/10 py-3 text-sm font-bold uppercase tracking-wider text-white"
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setIsOpen(false);
+                      await logout();
+                      navigate('/');
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-950/40 border border-red-500/20 py-3 text-sm font-bold uppercase tracking-wider text-red-400 cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
             ) : (
-              <Link
-                to="/login"
-                onClick={() => setIsOpen(false)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 border border-white/10 py-3 text-sm font-bold uppercase tracking-wider text-white"
-              >
-                <User className="h-4 w-4" /> Account Login
-              </Link>
+              <div className="flex gap-3">
+                <Link
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 border border-white/10 py-3 text-sm font-bold uppercase tracking-wider text-white"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#C9A84C] text-black py-3 text-sm font-bold uppercase tracking-wider"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
             <a
               href="#offer"
               onClick={() => setIsOpen(false)}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] py-3 text-sm font-bold uppercase tracking-wider text-black"
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] py-3 text-sm font-bold uppercase tracking-wider text-black"
             >
               <Sparkles className="h-4 w-4" /> Get 20% Off
             </a>
