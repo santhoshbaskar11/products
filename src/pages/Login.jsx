@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { ShieldCheck, Lock, Mail, User, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -15,15 +15,17 @@ const Login = () => {
 
   const { login, adminLogin, user, adminUser } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // If already logged in, redirect directly
+  // If already logged in, redirect directly to original page or products catalog
   useEffect(() => {
     if (user) {
-      navigate('/products');
+      const origin = location.state?.from?.pathname || '/products';
+      navigate(origin);
     } else if (adminUser) {
       navigate('/admin');
     }
-  }, [user, adminUser, navigate]);
+  }, [user, adminUser, navigate, location]);
 
   const handleUserLoginSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +34,8 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate('/products');
+      const origin = location.state?.from?.pathname || '/products';
+      navigate(origin);
     } catch (err) {
       console.error('User login error:', err);
       setError(err.message || 'Invalid email or password.');
