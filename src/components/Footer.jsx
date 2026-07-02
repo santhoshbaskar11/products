@@ -28,7 +28,7 @@ const Footer = () => {
           
           {/* Logo / Brand Info (5 Cols) */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="flex items-center gap-2 cursor-pointer group">
+            <Link to="/" className="flex items-center gap-2 cursor-pointer group">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97E] text-black font-extrabold shadow-[0_0_15px_rgba(201,168,76,0.2)]">
                 👑
               </span>
@@ -40,7 +40,7 @@ const Footer = () => {
                   Grooming Co.
                 </span>
               </div>
-            </div>
+            </Link>
             
             <p className="text-sm text-zinc-400 font-light leading-relaxed max-w-sm">
               Crafting premium organic products tailored for the discerning gentleman. Empowering your style, beard, hair, and skin health daily with botanical science.
