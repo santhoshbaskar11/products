@@ -3,6 +3,32 @@ import { supabase } from '../supabaseClient';
 
 export const AuthContext = createContext(null);
 
+// Create or upsert a customer profile record immediately after auth
+const provisionCustomerRecord = async (user) => {
+  if (!user) return;
+  try {
+    const { data: existing } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', user.id)
+      .limit(1);
+
+    if (!existing || existing.length === 0) {
+      const name = user.user_metadata?.full_name || user.email.split('@')[0];
+      const { error } = await supabase.from('customers').insert({
+        id: user.id,
+        full_name: name,
+        email: user.email,
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      });
+      if (error) console.error('provisionCustomerRecord insert error:', error.message);
+    }
+  } catch (err) {
+    console.error('provisionCustomerRecord error:', err);
+  }
+};
+
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,14 +43,18 @@ export const AuthContextProvider = ({ children }) => {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
       setLoading(false);
+      if (u) provisionCustomerRecord(u);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (login, logout, token refresh, signup)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
       setLoading(false);
+      if (u) provisionCustomerRecord(u);
     });
 
     return () => subscription.unsubscribe();
@@ -36,6 +66,7 @@ export const AuthContextProvider = ({ children }) => {
       password
     });
     if (error) throw error;
+    // provisionCustomerRecord is called by onAuthStateChange automatically
     return data.user;
   };
 
@@ -50,6 +81,10 @@ export const AuthContextProvider = ({ children }) => {
       }
     });
     if (error) throw error;
+    // Immediately provision customer record after signup
+    if (data.user) {
+      await provisionCustomerRecord(data.user);
+    }
     return data.user;
   };
 

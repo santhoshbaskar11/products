@@ -54,15 +54,22 @@ export const ShopContextProvider = ({ children }) => {
   const ensureCustomerRecord = async (id, name, email) => {
     try {
       const { data, error } = await supabase.from('customers').select('id').eq('id', id).limit(1);
-      if (error) throw error;
+      if (error) {
+        console.error("ensureCustomerRecord select error:", error.message);
+        return;
+      }
       if (!data || data.length === 0) {
+        // Always include user_id so RLS policy (auth.uid() = user_id) passes
         const userPayload = await getUserIdPayload();
-        await supabase.from('customers').insert({
+        const insertPayload = {
           id,
           full_name: name,
           email,
+          created_at: new Date().toISOString(),
           ...userPayload
-        });
+        };
+        const { error: insertErr } = await supabase.from('customers').insert(insertPayload);
+        if (insertErr) console.error("ensureCustomerRecord insert error:", insertErr.message);
       }
     } catch (err) {
       console.error("Error ensuring customer record exists:", err);
@@ -223,21 +230,40 @@ export const ShopContextProvider = ({ children }) => {
 
   const loadCustomers = async () => {
     try {
-      const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
+      // Fetch all customers
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error("Customers load failed:", error.message);
+        return;
+      }
 
       if (data && data.length > 0) {
-        setCustomers(data.map(c => ({
-          id: c.id,
-          name: c.full_name,
-          email: c.email,
-          phone: c.phone || 'N/A',
-          address: c.address || 'N/A',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-          ordersCount: 0, // computed dynamic below
-          totalSpent: 0,
-          tier: 'Standard'
-        })));
+        // Also fetch orders to compute per-customer stats
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('customer_id, total_amount');
+
+        setCustomers(data.map(c => {
+          const custOrders = (ordersData || []).filter(o => o.customer_id === c.id);
+          const totalSpent = custOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+          return {
+            id: c.id,
+            name: c.full_name || 'Unknown',
+            email: c.email || 'N/A',
+            phone: c.phone || 'N/A',
+            address: c.address || 'N/A',
+            avatar: c.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            joinDate: c.created_at?.slice(0, 10) || 'N/A',
+            ordersCount: custOrders.length,
+            totalSpent,
+            tier: totalSpent > 200 ? 'Sovereign VIP' : totalSpent > 50 ? 'Pro Barber' : 'Standard'
+          };
+        }));
+      } else {
+        setCustomers([]);
       }
     } catch (e) {
       console.error("Customers load failed:", e);
@@ -248,22 +274,37 @@ export const ShopContextProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, customers(*), order_items(*)')
+        .select(`
+          id, customer_id, total_amount, payment_status, order_status, created_at,
+          customers ( id, full_name, email, phone ),
+          order_items ( id, product_id, quantity, price )
+        `)
         .order('created_at', { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        console.error("Orders load failed:", error.message, error.details, error.hint);
+        return;
+      }
 
       if (data && data.length > 0) {
         const mapped = data.map(o => ({
           id: o.id,
+          customerId: o.customer_id,
           customer: o.customers?.full_name || 'Guest Customer',
           email: o.customers?.email || 'N/A',
+          phone: o.customers?.phone || 'N/A',
           date: o.created_at?.slice(0, 10),
-          amount: Number(o.total_amount),
-          status: o.order_status,
-          paymentStatus: o.payment_status,
-          items: o.order_items || []
+          amount: Number(o.total_amount || 0),
+          status: o.order_status || 'Processing',
+          paymentStatus: o.payment_status || 'Pending',
+          items: (o.order_items || []).map(item => ({
+            product: { id: item.product_id, price: Number(item.price || 0) },
+            quantity: item.quantity
+          }))
         }));
         setOrders(mapped);
+      } else {
+        setOrders([]);
       }
     } catch (e) {
       console.error("Orders load failed:", e);
