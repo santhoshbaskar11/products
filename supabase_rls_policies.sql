@@ -1,20 +1,44 @@
--- SQL Script to enable Row Level Security (RLS) and configure policies for all tables
+-- SQL Script to create tables (if missing), enable Row Level Security (RLS) and configure policies
 -- Run this script in the SQL Editor of your Supabase Dashboard (https://supabase.com/)
 
--- list of tables:
--- 1. products
--- 2. customers
--- 3. reviews
--- 4. orders
--- 5. order_items
--- 6. contact_messages
--- 7. custom_grooming_orders
--- 8. offers
--- 9. cart
--- 10. wishlist
+--------------------------------------------------------------------------------
+-- 1. Create Missing Tables (if they do not already exist)
+--------------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.customers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name text,
+  email text UNIQUE,
+  phone text,
+  address text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.custom_grooming_orders (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  customer_id uuid REFERENCES public.customers(id) ON DELETE CASCADE,
+  product_type text NOT NULL,
+  brand text NOT NULL,
+  fragrance text NOT NULL,
+  quantity integer NOT NULL DEFAULT 1,
+  gift_packaging boolean NOT NULL DEFAULT false,
+  custom_note text,
+  estimated_price numeric NOT NULL,
+  status text NOT NULL DEFAULT 'Processing',
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.offers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  code text NOT NULL UNIQUE,
+  discount_percent integer NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
 --------------------------------------------------------------------------------
--- 1. Ensure user_id column exists on all tables and references auth.users(id)
+-- 2. Ensure user_id column exists on all tables and references auth.users(id)
 --------------------------------------------------------------------------------
 
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
@@ -29,7 +53,7 @@ ALTER TABLE public.cart ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.us
 ALTER TABLE public.wishlist ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) DEFAULT auth.uid();
 
 --------------------------------------------------------------------------------
--- 2. Enable Row Level Security (RLS) on all tables
+-- 3. Enable Row Level Security (RLS) on all tables
 --------------------------------------------------------------------------------
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -44,12 +68,11 @@ ALTER TABLE public.cart ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
 
 --------------------------------------------------------------------------------
--- 3. Configure Policies
+-- 4. Configure Policies
 -- Each user can only select, insert, update, or delete their own records where
 -- user_id matches their authenticated auth.uid().
 --------------------------------------------------------------------------------
 
--- Helper Macro to safely drop and recreate policies
 -- PRODUCTS
 DROP POLICY IF EXISTS "Allow user select on products" ON public.products;
 DROP POLICY IF EXISTS "Allow user insert on products" ON public.products;
