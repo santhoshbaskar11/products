@@ -10,8 +10,9 @@
  *   const result = await apiPost('/api/orders', { items: [...] });
  */
 
-// Read the backend URL from the Vite environment variable
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Read the backend URL from the Vite environment variable.
+// Falls back to the deployed Render URL if the env var is missing.
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-grooming-1.onrender.com';
 
 /**
  * Core fetch wrapper.

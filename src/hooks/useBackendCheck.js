@@ -22,14 +22,14 @@ const diagnose = (error, url) => {
   const msg = error?.message || String(error);
 
   // ── 1. Env variable not configured ─────────────────────────────
-  if (!url || url.includes('YOUR-BACKEND')) {
+  if (!url) {
     console.error(
-      '%c[Fix] VITE_API_URL is not set correctly.',
+      '%c[Fix] VITE_API_URL is not set.',
       'color:#f87171;font-weight:bold'
     );
     console.info(
-      '👉 Open frontend/.env and replace the placeholder:\n' +
-      '   VITE_API_URL=https://your-actual-service.onrender.com\n' +
+      '👉 Open frontend/.env and add:\n' +
+      '   VITE_API_URL=https://backend-grooming-1.onrender.com\n' +
       '   Then restart the Vite dev server (npm run dev).'
     );
     return;
@@ -100,11 +100,9 @@ const diagnose = (error, url) => {
 const useBackendCheck = () => {
   useEffect(() => {
     const check = async () => {
-      // ── Guard: env var not configured ────────────────────────────
-      if (!API_URL || API_URL.includes('YOUR-BACKEND')) {
-        console.warn(
-          '⚠️  Backend check skipped — VITE_API_URL is not configured.'
-        );
+      // ── Guard: env var genuinely not configured ───────────────────
+      if (!API_URL) {
+        console.warn('⚠️  Backend check skipped — VITE_API_URL is not set in .env');
         diagnose(new Error('env-not-set'), API_URL);
         return;
       }
