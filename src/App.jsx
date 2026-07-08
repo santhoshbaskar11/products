@@ -21,6 +21,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
+import ApiStatus from './components/ApiStatus';
 
 // Admin Subpages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -107,6 +108,9 @@ function App() {
   return (
     <div className="min-h-screen bg-[#08080a] text-[#f3f4f6] font-sans antialiased overflow-x-hidden selection:bg-[#C9A84C] selection:text-black flex flex-col justify-between">
       <div>
+      {/* Silent backend health-check — logs to Console only, renders nothing */}
+        <ApiStatus />
+
         {/* Global Navigation */}
         <Navbar />
 
