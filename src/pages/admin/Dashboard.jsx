@@ -1,9 +1,9 @@
 import React, { useContext } from 'react';
 import { ShopContext } from '../../context/ShopContext';
-import { Truck, DollarSign, Users, Award, ShoppingBag, MessageSquare, ClipboardList, TrendingUp } from 'lucide-react';
+import { Truck, DollarSign, Users, Award, ShoppingBag, MessageSquare, ClipboardList, TrendingUp, CreditCard } from 'lucide-react';
 
 const Dashboard = () => {
-  const { products, orders, reviews, customers, contactMessages, customOrders } = useContext(ShopContext);
+  const { products, orders, reviews, customers, contactMessages, customOrders, payments } = useContext(ShopContext);
 
   // Compute stats
   const totalSales = orders.reduce((sum, o) => sum + o.amount, 0);
@@ -12,6 +12,8 @@ const Dashboard = () => {
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : '0.0';
 
+  const onlineRevenue = (payments || []).reduce((sum, p) => sum + p.amount, 0);
+
   const stats = [
     {
       title: 'Total Sales Revenue',
@@ -19,6 +21,13 @@ const Dashboard = () => {
       sub: `${orders.length} standard order(s)`,
       icon: DollarSign,
       color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+    },
+    {
+      title: 'Razorpay Online Revenue',
+      value: `₹${onlineRevenue.toFixed(2)}`,
+      sub: `${(payments || []).length} verified payment(s)`,
+      icon: CreditCard,
+      color: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
     },
     {
       title: 'Active Catalog Items',
@@ -120,7 +129,7 @@ const Dashboard = () => {
         <div className="lg:col-span-5 bg-zinc-950 border border-white/10 rounded-3xl p-6 md:p-8 space-y-6">
           <h4 className="text-base font-bold text-white font-serif tracking-wide">Recent Operations</h4>
           
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
             <h5 className="text-[10px] font-bold text-[#C9A84C] uppercase tracking-wider">Standard Orders</h5>
             {orders.slice(0, 2).map((order) => (
               <div key={order.id} className="flex items-center gap-3 text-xs border-b border-white/5 pb-3">
@@ -130,6 +139,20 @@ const Dashboard = () => {
                   <p className="text-[10px] text-zinc-500 mt-0.5">Order: {order.id} • Total ${order.amount.toFixed(2)}</p>
                 </div>
                 <span className="text-[10px] text-[#E8C97E] font-medium">{order.date}</span>
+              </div>
+            ))}
+
+            <h5 className="text-[10px] font-bold text-[#C9A84C] uppercase tracking-wider pt-2">Recent Online Payments</h5>
+            {(payments || []).slice(0, 2).map((payment) => (
+              <div key={payment.id} className="flex items-center gap-3 text-xs border-b border-white/5 pb-3">
+                <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                <div className="flex-1">
+                  <p className="text-white font-semibold">{payment.customerName} paid ₹{payment.amount.toFixed(2)}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">ID: {payment.razorpayPaymentId} • Status: {payment.paymentStatus}</p>
+                </div>
+                <span className="text-[10px] text-[#E8C97E] font-medium">
+                  {payment.transactionDate ? new Date(payment.transactionDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
+                </span>
               </div>
             ))}
 
@@ -146,6 +169,7 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
+
 
       </div>
     </div>

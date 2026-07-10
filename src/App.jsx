@@ -33,6 +33,8 @@ import AdminReviews from './pages/admin/AdminReviews';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminCustomOrders from './pages/admin/AdminCustomOrders';
 import AdminOffers from './pages/admin/AdminOffers';
+import AdminPayments from './pages/admin/AdminPayments';
+
 
 // 404 Page
 const NotFound = () => (
@@ -139,7 +141,9 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="payments" element={<AdminPayments />} />
             <Route path="customers" element={<AdminCustomers />} />
+
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="custom-orders" element={<AdminCustomOrders />} />

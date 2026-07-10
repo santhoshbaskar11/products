@@ -23,12 +23,14 @@ export const ShopContextProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
   const [orders, setOrders] = useState([]);
+  const [payments, setPayments] = useState([]);   // ← Razorpay payment records
   const [customers, setCustomers] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
   const [customOrders, setCustomOrders] = useState([]);
   const [offers, setOffers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState([]);
+
 
   // Seeding/loading helper
   const [guestCustomerId, setGuestCustomerId] = useState(null);
@@ -112,9 +114,11 @@ export const ShopContextProvider = ({ children }) => {
       // Load user-specific data
       await loadCustomers();
       await loadOrders();
+      await loadPayments();
       await loadContactMessages();
       await loadCustomOrders();
       await loadCartAndWishlist(activeId);
+
     };
 
     initializeDatabase();
@@ -275,14 +279,15 @@ export const ShopContextProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('orders')
         .select(`
-          id, customer_id, total_amount, payment_status, order_status, created_at,
+          id, customer_id, total_amount, payment_status, order_status,
+          payment_method, razorpay_payment_id, razorpay_order_id, created_at,
           customers ( id, full_name, email, phone ),
           order_items ( id, product_id, quantity, price )
         `)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Orders load failed:", error.message, error.details, error.hint);
+        console.error('Orders load failed:', error.message, error.details, error.hint);
         return;
       }
 
@@ -297,6 +302,9 @@ export const ShopContextProvider = ({ children }) => {
           amount: Number(o.total_amount || 0),
           status: o.order_status || 'Processing',
           paymentStatus: o.payment_status || 'Pending',
+          paymentMethod: o.payment_method || 'N/A',
+          razorpayPaymentId: o.razorpay_payment_id || null,
+          razorpayOrderId:   o.razorpay_order_id   || null,
           items: (o.order_items || []).map(item => ({
             product: { id: item.product_id, price: Number(item.price || 0) },
             quantity: item.quantity
@@ -307,9 +315,54 @@ export const ShopContextProvider = ({ children }) => {
         setOrders([]);
       }
     } catch (e) {
-      console.error("Orders load failed:", e);
+      console.error('Orders load failed:', e);
     }
   };
+
+  // ── Load all payments from Supabase ──────────────────────────────
+  const loadPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select(`
+          id, customer_id, order_id, razorpay_order_id, razorpay_payment_id,
+          razorpay_signature, amount, currency, payment_method, payment_status,
+          transaction_date, created_at, updated_at,
+          customers ( id, full_name, email )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Payments load failed:', error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setPayments(data.map(p => ({
+          id:                  p.id,
+          customerId:          p.customer_id,
+          orderId:             p.order_id,
+          razorpayOrderId:     p.razorpay_order_id,
+          razorpayPaymentId:   p.razorpay_payment_id,
+          razorpaySignature:   p.razorpay_signature,
+          amount:              Number(p.amount || 0),
+          currency:            p.currency,
+          paymentMethod:       p.payment_method,
+          paymentStatus:       p.payment_status,
+          customerName:        p.customers?.full_name || 'Guest',
+          customerEmail:       p.customers?.email     || 'N/A',
+          transactionDate:     p.transaction_date,
+          createdAt:           p.created_at,
+          updatedAt:           p.updated_at,
+        })));
+      } else {
+        setPayments([]);
+      }
+    } catch (e) {
+      console.error('Payments load failed:', e);
+    }
+  };
+
 
   const loadContactMessages = async () => {
     try {
@@ -952,7 +1005,87 @@ export const ShopContextProvider = ({ children }) => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────
+  // savePaymentToDb
+  // Saves verified Razorpay payment details to the `payments` table.
+  // Uses upsert on razorpay_payment_id to prevent duplicates.
+  // Also updates the related order status to Confirmed + payment_status to Paid.
+  // ─────────────────────────────────────────────────────────────────
+  const savePaymentToDb = async ({ paymentData, dbOrderId }) => {
+    if (!paymentData?.razorpay_payment_id) {
+      console.error('savePaymentToDb: missing razorpay_payment_id');
+      return null;
+    }
+
+    const activeId    = getActiveCustomerId();
+    const amountRupees = Number(paymentData.amount_rupees || 0);
+
+    if (amountRupees <= 0) {
+      console.warn('savePaymentToDb: amount is 0 or missing', paymentData.amount_rupees);
+    }
+
+    try {
+      // ── Upsert into payments table ────────────────────────────
+      // ON CONFLICT on razorpay_payment_id → update instead of duplicate
+      const { data: payRow, error: payErr } = await supabase
+        .from('payments')
+        .upsert({
+          customer_id:          activeId || null,
+          order_id:             dbOrderId || null,
+          razorpay_order_id:    paymentData.razorpay_order_id,
+          razorpay_payment_id:  paymentData.razorpay_payment_id,
+          razorpay_signature:   paymentData.razorpay_signature,
+          amount:               amountRupees,
+          currency:             paymentData.currency || 'INR',
+          payment_method:       'Razorpay',
+          payment_status:       'Success',
+          transaction_date:     paymentData.verified_at || new Date().toISOString(),
+          created_at:           new Date().toISOString(),
+          updated_at:           new Date().toISOString(),
+        }, { onConflict: 'razorpay_payment_id' })
+        .select()
+        .single();
+
+      if (payErr) {
+        console.error('❌ payments insert/upsert error:', payErr.message);
+      } else {
+        console.log('✅ Payment saved to DB:', {
+          id:                 payRow?.id,
+          razorpay_payment_id: paymentData.razorpay_payment_id,
+          amount:              amountRupees,
+        });
+      }
+
+      // ── Update linked order → Confirmed + Paid ────────────────
+      if (dbOrderId) {
+        const { error: orderUpdateErr } = await supabase
+          .from('orders')
+          .update({
+            order_status:        'Confirmed',
+            payment_status:      'Paid',
+            razorpay_payment_id: paymentData.razorpay_payment_id,
+            razorpay_order_id:   paymentData.razorpay_order_id,
+            payment_method:      'Razorpay',
+            updated_at:          new Date().toISOString(),
+          })
+          .eq('id', dbOrderId);
+
+        if (orderUpdateErr) {
+          console.error('❌ order update error after payment:', orderUpdateErr.message);
+        } else {
+          console.log('✅ Order updated → Confirmed + Paid:', dbOrderId);
+        }
+      }
+
+      return payRow;
+    } catch (err) {
+      console.error('❌ savePaymentToDb error:', err);
+      return null;
+    }
+  };
+
   const createOrderFromCart = async (customerName, customerEmail, paymentData = null) => {
+
     if (cart.length === 0) return;
 
     const email = customerEmail || 'guest@example.com';
@@ -1068,6 +1201,11 @@ export const ShopContextProvider = ({ children }) => {
         const mainOrderId = newOrd[0].id;
         console.log('✅ Order saved to DB. DB order ID:', mainOrderId);
 
+        // ── Save payment record to payments table ──────────────
+        if (paymentData?.razorpay_payment_id) {
+          await savePaymentToDb({ paymentData, dbOrderId: mainOrderId });
+        }
+
         // Insert order line items using the snapshot (NOT the cleared cart)
         for (const item of cartSnapshot) {
           const prodId = item.isCustom ? 'b1' : item.product.id;
@@ -1106,8 +1244,10 @@ export const ShopContextProvider = ({ children }) => {
 
       // Refresh dashboard data
       await loadOrders();
+      await loadPayments();
       await loadCustomOrders();
       await loadCustomers();
+
 
     } catch (err) {
       console.error('❌ Supabase checkout order error:', err);
@@ -1181,6 +1321,7 @@ export const ShopContextProvider = ({ children }) => {
         wishlist,
         reviews,
         orders,
+        payments,
         customers,
         contactMessages,
         customOrders,
@@ -1219,11 +1360,14 @@ export const ShopContextProvider = ({ children }) => {
         updateQuantity,
         clearCart,
         createOrderFromCart,
+        savePaymentToDb,
+        loadPayments,
         toggleWishlist,
         removeFromWishlist,
         moveToCart,
         getCartCount,
         getCartTotal,
+
       }}
     >
       {children}

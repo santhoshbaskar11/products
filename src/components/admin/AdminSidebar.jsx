@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LayoutDashboard, ShoppingBag, Truck, Users, MessageSquare, LogOut, ArrowLeft, Mail, ClipboardList, Sparkles } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Truck, Users, MessageSquare, LogOut, ArrowLeft, Mail, ClipboardList, Sparkles, CreditCard } from 'lucide-react';
 
 const AdminSidebar = () => {
   const { logout } = useContext(AuthContext);
@@ -46,10 +46,16 @@ const AdminSidebar = () => {
             Orders
           </NavLink>
 
+          <NavLink to="/admin/payments" className={navClass}>
+            <CreditCard className="h-4.5 w-4.5" />
+            Payments
+          </NavLink>
+
           <NavLink to="/admin/customers" className={navClass}>
             <Users className="h-4.5 w-4.5" />
             Customers
           </NavLink>
+
 
           <NavLink to="/admin/reviews" className={navClass}>
             <MessageSquare className="h-4.5 w-4.5" />
