@@ -49,9 +49,11 @@ export const initiateRazorpayPayment = async ({
   customerEmail = '',
   customerPhone = '',
   cartItems     = [],
+  onCreateOrder, // ← Callback to create order in Supabase
   onSuccess,
   onFailure,
 }) => {
+
 
   // ── Guard: validate amount before anything ──────────────────
   if (amount === undefined || amount === null || isNaN(amount) || Number(amount) <= 0) {
@@ -125,6 +127,18 @@ export const initiateRazorpayPayment = async ({
       });
 
       try {
+        // ── 1. Create order in Supabase first to get UUID ────────
+        let dbOrderId = null;
+        if (onCreateOrder) {
+          try {
+            dbOrderId = await onCreateOrder();
+            console.log('✅ Supabase order created prior to verification. Order ID:', dbOrderId);
+          } catch (orderErr) {
+            console.error('❌ Failed to create Supabase order:', orderErr);
+          }
+        }
+
+        // ── 2. Call backend /verify ──────────────────────────────
         const verifyRes = await fetch(`${API_URL}/api/payment/verify`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -132,6 +146,7 @@ export const initiateRazorpayPayment = async ({
             razorpay_order_id:   rzpResponse.razorpay_order_id,
             razorpay_payment_id: rzpResponse.razorpay_payment_id,
             razorpay_signature:  rzpResponse.razorpay_signature,
+            order_id:            dbOrderId, // pass order UUID to backend
             // ── Pass amount so backend can log & return it ──────
             amount_rupees:  orderData.amount_rupees,   // ₹ e.g. 499
             amount_paise:   orderData.amount,          // paise e.g. 49900
@@ -140,6 +155,7 @@ export const initiateRazorpayPayment = async ({
             customer_email: customerEmail,
           }),
         });
+
 
         const verifyData = await verifyRes.json();
 

@@ -1201,11 +1201,6 @@ export const ShopContextProvider = ({ children }) => {
         const mainOrderId = newOrd[0].id;
         console.log('✅ Order saved to DB. DB order ID:', mainOrderId);
 
-        // ── Save payment record to payments table ──────────────
-        if (paymentData?.razorpay_payment_id) {
-          await savePaymentToDb({ paymentData, dbOrderId: mainOrderId });
-        }
-
         // Insert order line items using the snapshot (NOT the cleared cart)
         for (const item of cartSnapshot) {
           const prodId = item.isCustom ? 'b1' : item.product.id;
@@ -1235,24 +1230,27 @@ export const ShopContextProvider = ({ children }) => {
             });
           }
         }
+        
+        // Clear remote cart after successful DB insert
+        if (activeId) {
+          await supabase.from('cart').delete().eq('customer_id', activeId);
+        }
+
+        // Refresh dashboard data
+        await loadOrders();
+        await loadPayments();
+        await loadCustomOrders();
+        await loadCustomers();
+
+        return mainOrderId;
       }
-
-      // Clear remote cart after successful DB insert
-      if (activeId) {
-        await supabase.from('cart').delete().eq('customer_id', activeId);
-      }
-
-      // Refresh dashboard data
-      await loadOrders();
-      await loadPayments();
-      await loadCustomOrders();
-      await loadCustomers();
-
-
+      return null;
     } catch (err) {
       console.error('❌ Supabase checkout order error:', err);
+      return null;
     }
   };
+
 
   // Wishlist actions
   const toggleWishlist = async (product) => {

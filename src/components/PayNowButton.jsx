@@ -33,11 +33,13 @@ const PayNowButton = ({
   customerEmail = '',
   customerPhone = '',
   cartItems     = [],  // cart snapshot for DB storage
+  onCreateOrder,       // ← Callback to create order in Supabase
   onSuccess,
   onFailure,
   disabled  = false,
   className = '',
 }) => {
+
   const [loading, setLoading]   = useState(false);
   const [status,  setStatus]    = useState(null); // 'success' | 'error' | null
 
@@ -53,6 +55,8 @@ const PayNowButton = ({
       customerEmail,
       customerPhone,
       cartItems,
+      onCreateOrder,
+
 
       onSuccess: (data) => {
         setLoading(false);

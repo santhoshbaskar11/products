@@ -32,11 +32,17 @@ const Cart = () => {
   };
 
   // ── Razorpay payment handlers ─────────────────────────────────
-  const handlePaymentSuccess = (paymentData) => {
-    // paymentData includes: razorpay_payment_id, razorpay_order_id,
-    // amount_rupees, amount_paise, currency, customer_name,
-    // customer_email, payment_status, verified_at
+  const handleCreateOrder = async () => {
+    const guestId = localStorage.getItem('sovereign_guest_customer_id') || Math.floor(Math.random() * 1000000).toString();
+    const email = user?.email || `guest-${guestId.slice(0, 8)}@sovereign.com`;
+    const name  = user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : 'Guest Customer');
+    
+    // Call createOrderFromCart and get the created dbOrderId
+    const dbOrderId = await createOrderFromCart(name, email);
+    return dbOrderId;
+  };
 
+  const handlePaymentSuccess = (paymentData) => {
     // Show success modal immediately
     setShowCheckoutModal(true);
 
@@ -44,20 +50,13 @@ const Cart = () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ Razorpay Payment Success');
     console.log('   Payment ID   :', paymentData.razorpay_payment_id);
-    console.log('   Order ID     :', paymentData.razorpay_order_id);
+    console.log('   Order ID     :', paymentData.order_id);
     console.log('   Amount Paid  : ₹' + (paymentData.amount_rupees?.toFixed(2) ?? 'MISSING'));
     console.log('   Currency     :', paymentData.currency);
     console.log('   Customer     :', paymentData.customer_name, '|', paymentData.customer_email);
     console.log('   Status       :', paymentData.payment_status);
     console.log('   Verified At  :', paymentData.verified_at);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    // Save order to Supabase — pass payment details so amount is stored correctly
-    createOrderFromCart(
-      paymentData.customer_name  || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest',
-      paymentData.customer_email || user?.email || 'guest@sovereign.com',
-      paymentData  // ← full payment object with verified amount
-    );
   };
 
   const handlePaymentFailure = (error) => {
@@ -213,10 +212,12 @@ const Cart = () => {
                   customerName={user?.user_metadata?.full_name || ''}
                   customerEmail={user?.email || ''}
                   cartItems={cart}
+                  onCreateOrder={handleCreateOrder}
                   onSuccess={handlePaymentSuccess}
                   onFailure={handlePaymentFailure}
                   disabled={cart.length === 0}
                 />
+
 
                 <Link
                   to="/beard-care"
