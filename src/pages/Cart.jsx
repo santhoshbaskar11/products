@@ -5,6 +5,7 @@ import SectionHeader from '../components/ui/SectionHeader';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, Sparkles, CheckCircle2 } from 'lucide-react';
 
 import { AuthContext } from '../context/AuthContext';
+import PayNowButton from '../components/PayNowButton';
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart, createOrderFromCart } = useContext(ShopContext);
@@ -28,6 +29,25 @@ const Cart = () => {
       
       createOrderFromCart(name, email);
     }, 1500);
+  };
+
+  // ── Razorpay payment handlers ─────────────────────────────────
+  const handlePaymentSuccess = (paymentData) => {
+    // Mark checkout as complete and show the success modal
+    setShowCheckoutModal(true);
+
+    // Also record the order in Supabase via the existing flow
+    const guestId = localStorage.getItem('sovereign_guest_customer_id') || Math.floor(Math.random() * 1000000).toString();
+    const email = user?.email || `guest-${guestId.slice(0, 8)}@sovereign.com`;
+    const name  = user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : 'Guest Customer');
+    createOrderFromCart(name, email);
+
+    console.log('✅ Razorpay payment success. Payment ID:', paymentData.razorpay_payment_id);
+  };
+
+  const handlePaymentFailure = (error) => {
+    console.error('❌ Razorpay payment failed:', error.message);
+    // No modal shown on failure — user can retry
   };
 
   return (
@@ -171,6 +191,16 @@ const Cart = () => {
                     </>
                   )}
                 </button>
+
+                {/* ── Razorpay Pay Now Button ── */}
+                <PayNowButton
+                  amount={total}
+                  customerName={user?.user_metadata?.full_name || ''}
+                  customerEmail={user?.email || ''}
+                  onSuccess={handlePaymentSuccess}
+                  onFailure={handlePaymentFailure}
+                  disabled={cart.length === 0}
+                />
 
                 <Link
                   to="/beard-care"
