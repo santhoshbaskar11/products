@@ -33,21 +33,36 @@ const Cart = () => {
 
   // ── Razorpay payment handlers ─────────────────────────────────
   const handlePaymentSuccess = (paymentData) => {
-    // Mark checkout as complete and show the success modal
+    // paymentData includes: razorpay_payment_id, razorpay_order_id,
+    // amount_rupees, amount_paise, currency, customer_name,
+    // customer_email, payment_status, verified_at
+
+    // Show success modal immediately
     setShowCheckoutModal(true);
 
-    // Also record the order in Supabase via the existing flow
-    const guestId = localStorage.getItem('sovereign_guest_customer_id') || Math.floor(Math.random() * 1000000).toString();
-    const email = user?.email || `guest-${guestId.slice(0, 8)}@sovereign.com`;
-    const name  = user?.user_metadata?.full_name || (user?.email ? user.email.split('@')[0] : 'Guest Customer');
-    createOrderFromCart(name, email);
+    // Log full verified payment details to browser console
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ Razorpay Payment Success');
+    console.log('   Payment ID   :', paymentData.razorpay_payment_id);
+    console.log('   Order ID     :', paymentData.razorpay_order_id);
+    console.log('   Amount Paid  : ₹' + (paymentData.amount_rupees?.toFixed(2) ?? 'MISSING'));
+    console.log('   Currency     :', paymentData.currency);
+    console.log('   Customer     :', paymentData.customer_name, '|', paymentData.customer_email);
+    console.log('   Status       :', paymentData.payment_status);
+    console.log('   Verified At  :', paymentData.verified_at);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    console.log('✅ Razorpay payment success. Payment ID:', paymentData.razorpay_payment_id);
+    // Save order to Supabase — pass payment details so amount is stored correctly
+    createOrderFromCart(
+      paymentData.customer_name  || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest',
+      paymentData.customer_email || user?.email || 'guest@sovereign.com',
+      paymentData  // ← full payment object with verified amount
+    );
   };
 
   const handlePaymentFailure = (error) => {
+    // Don't show modal — let user retry
     console.error('❌ Razorpay payment failed:', error.message);
-    // No modal shown on failure — user can retry
   };
 
   return (
@@ -197,6 +212,7 @@ const Cart = () => {
                   amount={total}
                   customerName={user?.user_metadata?.full_name || ''}
                   customerEmail={user?.email || ''}
+                  cartItems={cart}
                   onSuccess={handlePaymentSuccess}
                   onFailure={handlePaymentFailure}
                   disabled={cart.length === 0}

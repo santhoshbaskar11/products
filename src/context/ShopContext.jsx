@@ -952,116 +952,165 @@ export const ShopContextProvider = ({ children }) => {
     }
   };
 
-  const createOrderFromCart = async (customerName, customerEmail) => {
+  const createOrderFromCart = async (customerName, customerEmail, paymentData = null) => {
     if (cart.length === 0) return;
 
     const email = customerEmail || 'guest@example.com';
-    const name = customerName || 'Guest Customer';
-    
-    // Local Order Insertion mock logic
-    const orderId = `ORD-${Date.now().toString().slice(-4)}`;
-    const orderItems = cart.map(item => ({
-      name: item.product.name,
-      qty: item.quantity,
-      price: item.product.price
+    const name  = customerName  || 'Guest Customer';
+
+    // ── Capture cart snapshot BEFORE clearing ──────────────────
+    // (cart state is cleared below; we need the items for DB insert)
+    const cartSnapshot = [...cart];
+
+    // ── Determine total amount ──────────────────────────────────
+    // If payment was via Razorpay, use the verified amount from the backend.
+    // Otherwise fall back to local calculation.
+    const calculatedTotal  = getCartTotal() + (getCartTotal() > 50 ? 0 : 5.99);
+    const verifiedAmount   = paymentData?.amount_rupees;
+    const finalAmount      = (verifiedAmount && verifiedAmount > 0)
+      ? verifiedAmount
+      : calculatedTotal;
+
+    // ── Local order state update ────────────────────────────────
+    const orderId    = `ORD-${Date.now().toString().slice(-4)}`;
+    const orderItems = cartSnapshot.map(item => ({
+      name:  item.product.name,
+      qty:   item.quantity,
+      price: item.product.price,
     }));
 
     const newOrder = {
-      id: orderId,
-      customer: name,
-      email: email,
-      date: new Date().toISOString().slice(0, 10),
-      amount: getCartTotal() + (getCartTotal() > 50 ? 0 : 5.99),
-      items: orderItems,
-      status: 'Processing',
-      paymentStatus: 'Paid'
+      id:            orderId,
+      customer:      name,
+      email:         email,
+      date:          new Date().toISOString().slice(0, 10),
+      amount:        finalAmount,
+      items:         orderItems,
+      status:        'Processing',
+      paymentStatus: paymentData ? 'Paid' : 'Pending',
+      // Razorpay IDs (if paid via Razorpay)
+      razorpay_payment_id: paymentData?.razorpay_payment_id || null,
+      razorpay_order_id:   paymentData?.razorpay_order_id   || null,
+      payment_method:      paymentData ? 'Razorpay' : 'Cash on Delivery',
     };
 
     setOrders(prev => [newOrder, ...prev]);
 
     // Handle Custom Kit orders inside cart locally
-    cart.forEach(item => {
+    cartSnapshot.forEach(item => {
       if (item.isCustom) {
         const customOrderObj = {
-          id: `CST-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`,
-          customer: name,
-          email: email,
-          category: item.product.category,
-          brand: item.product.brand,
+          id:        `CST-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`,
+          customer:  name,
+          email:     email,
+          category:  item.product.category,
+          brand:     item.product.brand,
           fragrance: item.product.fragrance,
           packaging: item.product.packaging,
-          notes: item.product.notes,
-          price: item.product.price,
-          quantity: item.quantity,
-          status: 'Processing',
-          date: new Date().toISOString().slice(0, 10)
+          notes:     item.product.notes,
+          price:     item.product.price,
+          quantity:  item.quantity,
+          status:    'Processing',
+          date:      new Date().toISOString().slice(0, 10),
         };
         setCustomOrders(prev => [customOrderObj, ...prev]);
       }
     });
 
     addToast(`Order ${orderId} successfully placed!`);
+    // Clear cart AFTER capturing snapshot (already done above)
     setCart([]);
 
-    // Sync checkout process to Supabase database
+    // ── Sync to Supabase ────────────────────────────────────────
     try {
-      const activeId = getActiveCustomerId();
+      const activeId   = getActiveCustomerId();
       const userPayload = await getUserIdPayload();
-      
-      // Ensure customer record exists in database
+
+      // Ensure customer record exists
       await ensureCustomerRecord(activeId, name, email);
 
-      // Insert main order record
-      const { data: newOrd } = await supabase.from('orders').insert({
-        customer_id: activeId,
-        total_amount: newOrder.amount,
-        payment_status: 'Paid',
-        order_status: 'Processing',
-        ...userPayload
-      }).select();
+      // Build the order row — include Razorpay IDs and verified amount
+      const orderRow = {
+        customer_id:    activeId,
+        total_amount:   finalAmount,            // ← verified ₹ amount
+        payment_status: newOrder.paymentStatus,
+        order_status:   'Processing',
+        payment_method: newOrder.payment_method,
+        ...userPayload,
+      };
+
+      // Store Razorpay IDs if columns exist (add them to your Supabase table if missing)
+      if (paymentData?.razorpay_payment_id) {
+        orderRow.razorpay_payment_id = paymentData.razorpay_payment_id;
+      }
+      if (paymentData?.razorpay_order_id) {
+        orderRow.razorpay_order_id = paymentData.razorpay_order_id;
+      }
+
+      console.log('💾 Saving order to Supabase:', {
+        customer_id:         activeId,
+        total_amount:        finalAmount,
+        payment_status:      orderRow.payment_status,
+        razorpay_payment_id: orderRow.razorpay_payment_id,
+        razorpay_order_id:   orderRow.razorpay_order_id,
+      });
+
+      const { data: newOrd, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderRow)
+        .select();
+
+      if (orderError) {
+        console.error('❌ Supabase orders insert error:', orderError.message);
+      }
 
       if (newOrd && newOrd.length > 0) {
         const mainOrderId = newOrd[0].id;
-        
-        // Insert order line items
-        for (const item of cart) {
-          const prodId = item.isCustom ? 'b1' : item.product.id;
-          await supabase.from('order_items').insert({
-            order_id: mainOrderId,
-            product_id: prodId,
-            quantity: item.quantity,
-            price: item.product.price,
-            ...userPayload
-          });
+        console.log('✅ Order saved to DB. DB order ID:', mainOrderId);
 
-          // Insert custom orders details in custom_grooming_orders if applicable
+        // Insert order line items using the snapshot (NOT the cleared cart)
+        for (const item of cartSnapshot) {
+          const prodId = item.isCustom ? 'b1' : item.product.id;
+          const { error: itemError } = await supabase.from('order_items').insert({
+            order_id:   mainOrderId,
+            product_id: prodId,
+            quantity:   item.quantity,
+            price:      item.product.price,
+            ...userPayload,
+          });
+          if (itemError) {
+            console.error('❌ order_items insert error:', itemError.message, { prodId, quantity: item.quantity });
+          }
+
+          // Insert custom grooming orders if applicable
           if (item.isCustom) {
             await supabase.from('custom_grooming_orders').insert({
-              customer_id: activeId,
-              product_type: item.product.category,
-              brand: item.product.brand,
-              fragrance: item.product.fragrance,
-              quantity: item.quantity,
+              customer_id:    activeId,
+              product_type:   item.product.category,
+              brand:          item.product.brand,
+              fragrance:      item.product.fragrance,
+              quantity:       item.quantity,
               gift_packaging: item.product.packaging,
-              custom_note: item.product.notes,
+              custom_note:    item.product.notes,
               estimated_price: item.product.price,
-              ...userPayload
+              ...userPayload,
             });
           }
         }
       }
 
-      // Clear remote cart
+      // Clear remote cart after successful DB insert
       if (activeId) {
         await supabase.from('cart').delete().eq('customer_id', activeId);
       }
 
-      // Refresh data
+      // Refresh dashboard data
       await loadOrders();
       await loadCustomOrders();
       await loadCustomers();
+
     } catch (err) {
-      console.error("Supabase checkout order error:", err);
+      console.error('❌ Supabase checkout order error:', err);
     }
   };
 

@@ -32,6 +32,7 @@ const PayNowButton = ({
   customerName  = '',
   customerEmail = '',
   customerPhone = '',
+  cartItems     = [],  // cart snapshot for DB storage
   onSuccess,
   onFailure,
   disabled  = false,
@@ -51,6 +52,7 @@ const PayNowButton = ({
       customerName,
       customerEmail,
       customerPhone,
+      cartItems,
 
       onSuccess: (data) => {
         setLoading(false);
